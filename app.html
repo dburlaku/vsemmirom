@@ -1068,7 +1068,7 @@ async function intake(list){
       if(bmp.close) bmp.close();
       const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.72));
       const url=URL.createObjectURL(blob);
-      const im=new Image(); im.src=url; await im.decode().catch(()=>{});
+      const im=new Image(); im.src=url; await imReady(im);
       const ph={id:"p"+(photoSeq++),name:f.name,size:f.size,date,file:f,url,thumb:im,
                 score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
                 dup:false,weak:false,noHero:false,over:false,why:""};
@@ -1319,7 +1319,7 @@ $("pickHero").addEventListener("change",async e=>{
       if(bmp.close) bmp.close();
       const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.85));
       const url=URL.createObjectURL(blob);
-      const im=new Image(); im.src=url; await im.decode().catch(()=>{});
+      const im=new Image(); im.src=url; await imReady(im);
       state.heroRefs.push({name:f.name,url,img:im});
     }catch(_){}
   }
@@ -1621,6 +1621,17 @@ const LAY_ICONS={
   trio:'<rect x="3" y="2" width="22" height="10" rx="1"/><rect x="3" y="14" width="10" height="6" rx="1"/><rect x="15" y="14" width="10" height="6" rx="1"/>',
   quad:'<rect x="3" y="3" width="10" height="7" rx="1"/><rect x="15" y="3" width="10" height="7" rx="1"/><rect x="3" y="12" width="10" height="7" rx="1"/><rect x="15" y="12" width="10" height="7" rx="1"/>'
 };
+/* декодирование картинки: в некоторых встроенных браузерах decode() не резолвится — подстраховываемся */
+function imReady(im){
+  return new Promise(res=>{
+    let done=false; const fin=()=>{ if(!done){ done=true; res(); } };
+    try{ im.decode().then(fin,fin); }catch(_){ }
+    im.addEventListener("load",fin,{once:true});
+    im.addEventListener("error",fin,{once:true});
+    if(im.complete&&im.naturalWidth) fin();
+    setTimeout(fin,4000);
+  });
+}
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 /* Шапка редактора: слово «Книга» добавляем только если названия ещё нет или оно не начинается с него. */
 function brandHtml(t){
@@ -1869,7 +1880,7 @@ $("pickMore").addEventListener("change",async e=>{
       if(bmp.close) bmp.close();
       const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.72));
       const url=URL.createObjectURL(blob);
-      const im=new Image(); im.src=url; await im.decode().catch(()=>{});
+      const im=new Image(); im.src=url; await imReady(im);
       const ph={id:"x"+(n++),name:f.name,size:f.size,date:exifDate(f,head),file:f,url,thumb:im,
                 score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
                 dup:false,weak:false,noHero:false,over:false,why:""};
