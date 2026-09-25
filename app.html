@@ -1915,7 +1915,9 @@ function brandHtml(t){
 function setBrand(t){
   const el=$("edBrand"); if(!el) return;
   const occ=(OCCASIONS[state.occasion]||{}).label||"";
-  el.innerHTML=brandHtml(t)+(occ?'<i>'+esc(occ.toLowerCase())+'</i>':'');
+  const title=String(t||"").toLowerCase();
+  const dup=occ&&title.indexOf(occ.toLowerCase().slice(0,5))>=0;   // «Книга к юбилею» + «юбилей»
+  el.innerHTML=brandHtml(t)+((occ&&!dup)?'<i>'+esc(occ.toLowerCase())+'</i>':'');
 }
 const rowHtml=(l,c)=>'<div class="row"><label>'+l+'</label>'+c+'</div>';
 function slotList(p){
@@ -2302,7 +2304,7 @@ function helpDialog(){
 /* §4.3: пересборка называет последствия и предлагает щадящий вариант */
 $("rebuild").addEventListener("click",()=>{
   moreMenu(false);
-  const manual=state.pages.filter(p=>p.type==="photos"&&p.touched).length;
+  const manual=state.pages.filter(p=>p.touched).length;
   const empty=state.pages.filter(p=>p.type==="photos"&&p.slots.some(x=>!x)).length;
   confirmBox({title:"Пересобрать книгу?",
     text:"Страницы соберутся заново по датам: "+(manual
@@ -2639,7 +2641,9 @@ function guestOpen(token){
   if(!o){ window.__inviteMissing=true; return false; }
   const pers=rec.invite?o.invites.find(p=>p.id===rec.invite):null;
   const me=guestWho(o.id);
-  const known=!!(me||(pers&&(pers.status==="joined"||pers.status==="contrib")));
+  // приглашённого по имени организатор уже знает: его ссылка живёт до закрытия доступа,
+  // после закрытия сбора он видит книгу, но не добавляет (§4, §5)
+  const known=!!(me||(pers&&pers.status!=="removed"));
   if(o.revoked){ window.__inviteClosed="Организатор закрыл доступ к книге."; return false; }
   if(pers&&pers.status==="removed"){ window.__inviteClosed="Организатор убрал вас из участников книги."; return false; }
   if(!o.access.invite&&!known){
