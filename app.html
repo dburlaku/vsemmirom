@@ -1518,7 +1518,7 @@ function assemble(){
   });
   state.pages=pages; state.cur=0; state.selSlot=-1;
   $("rail").innerHTML="";
-  $("edBrand").innerHTML="Альбом <em>"+esc(state.title||"")+"</em>";
+  setBrand(state.title);
   inspector(); trayRender(); updHead(); render(); saveLocal();
 }
 $("go-scan").addEventListener("click",()=>{ runScan().catch(err=>{ crash("сборка",err); show("s-upload"); }); });
@@ -1532,6 +1532,16 @@ const LAY_ICONS={
   quad:'<rect x="3" y="3" width="10" height="7" rx="1"/><rect x="15" y="3" width="10" height="7" rx="1"/><rect x="3" y="12" width="10" height="7" rx="1"/><rect x="15" y="12" width="10" height="7" rx="1"/>'
 };
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* Шапка редактора: слово «Книга» добавляем только если названия ещё нет или оно не начинается с него. */
+function brandHtml(t){
+  const s=String(t==null?"":t).trim();
+  if(!s) return "Книга <em></em>";
+  const m=s.match(/^(книга|альбом)\s+([\s\S]+)$/i);
+  if(m) return esc(m[1])+" <em>"+esc(m[2])+"</em>";
+  if(/^(книга|альбом)$/i.test(s)) return esc(s)+" <em></em>";
+  return "Книга <em>"+esc(s)+"</em>";
+}
+function setBrand(t){ const el=$("edBrand"); if(el) el.innerHTML=brandHtml(t); }
 const rowHtml=(l,c)=>'<div class="row"><label>'+l+'</label>'+c+'</div>';
 function slotList(p){
   const n=p.type==="cover"?1:CAP[p.layout];
@@ -1570,7 +1580,7 @@ function inspector(){
   if($("inspAI")) $("inspAI").addEventListener("click",()=>aiDialog(state.cur));
   box.querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",()=>{
     p[el.dataset.k]=el.value;
-    if(p.type==="cover"&&el.dataset.k==="title"){ state.title=el.value; $("edBrand").innerHTML="Альбом <em>"+esc(el.value)+"</em>"; }
+    if(p.type==="cover"&&el.dataset.k==="title"){ state.title=el.value; setBrand(el.value); }
     render(); saveLocal();
   }));
   box.querySelectorAll("[data-lay]").forEach(b=>b.addEventListener("click",()=>{
@@ -1810,7 +1820,7 @@ function applyOrder(o){
   const start=TIER_START[o.tier]||24;
   state.target=start; $("npages").value=start; $("pgLabel").textContent=start;
   $("a-title").value=state.title;
-  $("edBrand").innerHTML="Книга <em>"+esc(state.title)+"</em>";
+  setBrand(state.title);
   projCard(); orderBar();
 }
 function tierRange(t){
@@ -2216,7 +2226,7 @@ function applyProject(o){
   state.title=o.title||state.title; state.sub=o.sub||"";
   if(o.occasion&&OCCASIONS[o.occasion]) state.occasion=o.occasion;
   state.pages=pages; state.cur=0; state.selSlot=-1;
-  $("edBrand").innerHTML="Альбом <em>"+esc(state.title)+"</em>";
+  setBrand(state.title);
   $("rail").innerHTML=""; inspector(); trayRender(); updHead(); render();
   return true;
 }
@@ -2414,6 +2424,5 @@ upCounts();
 show(window.__orderMissing ? "s-order" : (window.__orderStart || "s-landing"));
 })();
 </script>
-
 </body>
 </html>
