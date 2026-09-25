@@ -1104,6 +1104,11 @@ function loadFace(){
       try{
         if(!window.faceapi) await loadScript(lib,25000);
         const api=window.faceapi; if(!api) throw new Error("no faceapi");
+        // TensorFlow поднимает бэкенд лениво: без этого загрузка весов падает
+        if(api.tf){
+          try{ await api.tf.setBackend("webgl"); await api.tf.ready(); }
+          catch(_){ await api.tf.setBackend("cpu"); await api.tf.ready(); }
+        }
         await api.nets.ssdMobilenetv1.loadFromUri(base);
         await api.nets.faceLandmark68Net.loadFromUri(base);
         await api.nets.faceRecognitionNet.loadFromUri(base);
