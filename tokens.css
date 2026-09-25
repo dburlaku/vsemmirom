@@ -1,0 +1,61 @@
+/* Всем миром — единые токены оформления.
+   Подключается и лендингом, и редактором. Хардкод цветов и шрифтов в разметке запрещён. */
+:root{
+  color-scheme: light;
+
+  /* поверхности */
+  --ground:#F2F3EE;
+  --surface:#FFFFFF;
+  --surface-2:#EAECE3;
+  --line:#D9DDD4;
+
+  /* текст */
+  --ink:#1B2420;
+  --muted:#5B6761;
+
+  /* акцент и статусы */
+  --accent:#B3264C;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#F6DCE3;
+  --note:#F3D57A;
+  --note-ink:#3A2F0C;
+  --ok:#2E7D57;
+  --danger:#B3322B;
+
+  /* заглушки кадров */
+  --ph1:#C9D3C6; --ph2:#E4C9B8; --ph3:#B9C6D6; --ph4:#D9CFA8; --ph5:#CDBBD2;
+
+  /* шрифты */
+  --display:"Alegreya",Georgia,"Times New Roman",serif;
+  --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --hand:"Caveat","Comic Sans MS",cursive;
+
+  /* форма */
+  --r:8px;
+  --r-lg:12px;
+  --r-pill:999px;
+  --shadow:0 1px 2px rgba(27,36,32,.06),0 8px 24px rgba(27,36,32,.08);
+
+  /* синонимы для редактора, чтобы обе страницы жили на одних значениях */
+  --bg:var(--ground);
+  --panel:var(--surface);
+  --panel-2:var(--surface-2);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#131715; --surface:#1C221F; --surface-2:#232A26; --line:#2E3632;
+  --ink:#ECEFE9; --muted:#9BA69F;
+  --accent:#F0587A; --accent-ink:#1A0A10; --accent-soft:#3A1B25;
+  --note:#C9A94A; --note-ink:#1D1705; --ok:#69BE96; --danger:#E0736A;
+  --ph1:#3B4A40; --ph2:#57443A; --ph3:#374656; --ph4:#4E4832; --ph5:#4A3D50;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#131715; --surface:#1C221F; --surface-2:#232A26; --line:#2E3632;
+  --ink:#ECEFE9; --muted:#9BA69F;
+  --accent:#F0587A; --accent-ink:#1A0A10; --accent-soft:#3A1B25;
+  --note:#C9A94A; --note-ink:#1D1705; --ok:#69BE96; --danger:#E0736A;
+  --ph1:#3B4A40; --ph2:#57443A; --ph3:#374656; --ph4:#4E4832; --ph5:#4A3D50;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}

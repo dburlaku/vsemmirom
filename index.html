@@ -8,30 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,700;0,800;1,500&family=Onest:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="tokens.css">
 <style>
-:root{
-  --ground:#F2F3EE; --surface:#FFFFFF; --ink:#1B2420; --muted:#5B6761; --line:#D9DDD4;
-  --accent:#B3264C; --accent-ink:#FFFFFF; --accent-soft:#F6DCE3; --note:#F3D57A; --note-ink:#3A2F0C;
-  --ph1:#C9D3C6; --ph2:#E4C9B8; --ph3:#B9C6D6; --ph4:#D9CFA8; --ph5:#CDBBD2;
-  --shadow:0 1px 2px rgba(27,36,32,.06),0 8px 24px rgba(27,36,32,.08);
-  --display:"Alegreya",Georgia,"Times New Roman",serif;
-  --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --hand:"Caveat","Comic Sans MS",cursive;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  color-scheme:dark;
-  --ground:#131715; --surface:#1C221F; --ink:#ECEFE9; --muted:#9BA69F; --line:#2E3632;
-  --accent:#F0587A; --accent-ink:#1A0A10; --accent-soft:#3A1B25; --note:#C9A94A; --note-ink:#1D1705;
-  --ph1:#3B4A40; --ph2:#57443A; --ph3:#374656; --ph4:#4E4832; --ph5:#4A3D50;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
-}}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --ground:#131715; --surface:#1C221F; --ink:#ECEFE9; --muted:#9BA69F; --line:#2E3632;
-  --accent:#F0587A; --accent-ink:#1A0A10; --accent-soft:#3A1B25; --note:#C9A94A; --note-ink:#1D1705;
-  --ph1:#3B4A40; --ph2:#57443A; --ph3:#374656; --ph4:#4E4832; --ph5:#4A3D50;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
-}
 *{box-sizing:border-box}
 body{background:var(--ground);color:var(--ink);font:16px/1.55 var(--body);padding-inline:16px;}
 .wrap{max-width:1120px;margin-inline:auto}
@@ -233,7 +211,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
     <h2>Вы начинаете, остальное делаем вместе</h2>
     <div class="steps">
       <div class="step"><h3>Ответьте на 6 вопросов</h3><p>Повод, дата, сколько фото, кто участвует. Покажем образец книги и точную цену.</p></div>
-      <div class="step"><h3>Позовите родных</h3><p>Отправьте ссылку в семейный чат. Регистрация не нужна: имя и фото, этого достаточно.</p></div>
+      <div class="step"><h3>Позовите родных</h3><p>Отправьте ссылку в семейный чат. Регистрация не нужна: имя и фото, этого достаточно.</p><a class="btn ghost" href="#quiz" style="justify-self:start;padding:8px 14px;font-size:14px">Собрать книгу и позвать</a></div>
       <div class="step"><h3>Книга соберётся сама</h3><p>Уберём дубли и смазанные кадры, найдём главного героя, разложим по страницам и годам. Тексты подскажем.</p></div>
       <div class="step"><h3>Печать к дате</h3><p>Проверьте макет и отправьте в печать. Родные получат ссылку на книгу и смогут заказать свой экземпляр со скидкой 20%.</p></div>
     </div>
@@ -330,7 +308,7 @@ document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
   $("#occEyebrow").textContent=o.eb;$("#occTitle").innerHTML=o.t;$("#occLead").textContent=o.l;
   $("#capL").innerHTML=o.cl;$("#capR").innerHTML=o.cr;$("#sticky").textContent=o.st;$("#whoText").textContent=o.who;$("#fillText").textContent=o.fill;
   const m=o.fill.match(/(\d+) из (\d+)/);document.querySelector(".meter i").style.width=(m[1]/m[2]*100)+"%";
-  state.a.occ=b.dataset.occ; render();
+  state.a.occ=b.dataset.occ; render(true);
 }));
 
 /* ===== квиз ===== */
@@ -349,7 +327,10 @@ const Q=[
   {k:"people",t:"Кто будет собирать книгу?",o:[["1","Только я",""],["5","Я и 2–5 родных"],["12","6–20 человек"],["30","Больше 20","класс, большой отдел"]]}
 ];
 const PEOPLE_N={"1":1,"5":4,"12":12,"30":20};
-const state={i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null};
+const SKEY="vm:quiz";
+function saveQuiz(){ try{ localStorage.setItem(SKEY,JSON.stringify(state)); }catch(_){}}
+function loadQuiz(){ try{ return JSON.parse(localStorage.getItem(SKEY)||"null"); }catch(_){ return null; } }
+const state=Object.assign({i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null},loadQuiz()||{});
 const fmt=n=>n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽";
 function daysLeft(){if(!state.a.date)return null;const d=new Date(state.a.date+"T12:00:00");return Math.round((d-new Date())/864e5);}
 function recommend(){
@@ -367,8 +348,16 @@ function calc(){
   return {base,copy,copies,urgent,qr,cover,box,credit,ex,total:base+copies+urgent+qr+cover+box-credit};
 }
 function dots(){return '<div class="dots">'+Q.map((_,j)=>'<i class="'+(j<=state.i?"on":"")+'"></i>').join("")+"</div>";}
-function render(){
+function scrollToQuiz(){
+  const el=document.getElementById("quizBox");
+  if(!el) return;
+  const y=el.getBoundingClientRect().top+window.scrollY-90;
+  window.scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+}
+function render(keepScroll){
+  saveQuiz();
   const box=$("#quizBox");
+  if(!keepScroll) setTimeout(scrollToQuiz,30);
   if(state.done) return renderDone(box);
   if(state.i<Q.length) return renderQ(box);
   renderResult(box);
@@ -389,7 +378,7 @@ function renderQ(box){
   if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a></p>';
   box.innerHTML=h;
   box.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.a[q.k]=b.dataset.v;state.i++;render();});
-  const d=$("#qdate");if(d)d.onchange=()=>{state.a.date=d.value;render();};
+  const d=$("#qdate");if(d)d.onchange=()=>{state.a.date=d.value;render(true);};
   const nx=$("#next");if(nx)nx.onclick=()=>{state.i++;render();};
   const bk=$("#back");if(bk)bk.onclick=()=>{state.i--;render();};
 }
@@ -423,28 +412,57 @@ function renderResult(box){
   h+='<div class="qnav"><span></span><button class="btn" id="pay">Оплатить '+fmt(c.total)+'</button></div>';
   h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
   box.innerHTML=h;
-  box.querySelectorAll(".card").forEach(b=>b.onclick=()=>{state.pick=b.dataset.k;render();});
+  box.querySelectorAll(".card").forEach(b=>b.onclick=()=>{state.pick=b.dataset.k;render(true);});
   $("#again").onclick=()=>{state.i=0;render();};
-  $("#cm").onclick=()=>{state.copies=Math.max(0,state.copies-1);syncEx();render();};
-  $("#cp").onclick=()=>{state.copies=Math.min(20,state.copies+1);syncEx();render();};
-  $("#oqr").onchange=e=>{state.qr=e.target.checked;render();};
-  $("#ocov").onchange=e=>{state.cover=e.target.checked?99:0;render();};
-  $("#obox").onchange=e=>{state.box=e.target.checked?99:0;render();};
-  $("#ourg").onchange=e=>{state.urgent=e.target.checked;state.urgentAuto=false;render();};
-  const cr=$("#ocr");if(cr)cr.onchange=e=>{state.credit=e.target.checked;render();};
+  $("#cm").onclick=()=>{state.copies=Math.max(0,state.copies-1);syncEx();render(true);};
+  $("#cp").onclick=()=>{state.copies=Math.min(20,state.copies+1);syncEx();render(true);};
+  $("#oqr").onchange=e=>{state.qr=e.target.checked;render(true);};
+  $("#ocov").onchange=e=>{state.cover=e.target.checked?99:0;render(true);};
+  $("#obox").onchange=e=>{state.box=e.target.checked?99:0;render(true);};
+  $("#ourg").onchange=e=>{state.urgent=e.target.checked;state.urgentAuto=false;render(true);};
+  const cr=$("#ocr");if(cr)cr.onchange=e=>{state.credit=e.target.checked;render(true);};
   $("#pay").onclick=()=>{state.done=true;render();};
 }
 function syncEx(){}
+function makeOrder(){
+  const c=calc(), t=TAR[state.pick];
+  const id="o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const occMap={mom:"jubilee",wedding:"wedding",work:"other",grad:"family",other:"other"};
+  const o={
+    id:id, createdAt:Date.now(), status:"paid",           // в MVP оплата — заглушка
+    title:{mom:"Книга к юбилею",wedding:"Книга к годовщине",work:"Книга от коллег",grad:"Книга класса"}[state.a.occ]||"Книга историй",
+    occasion:occMap[state.a.occ]||"other",
+    occKey:state.a.occ,
+    date:state.a.date||"", deliv:state.a.deliv||"later",
+    photos:state.a.photos||"", texts:state.a.texts||"", people:PEOPLE_N[state.a.people]||1,
+    tier:t.n, tierPrice:t.p,
+    options:{copies:state.copies, qr:state.qr, cover:!!state.cover, box:!!state.box, urgent:state.urgent, credit:state.credit},
+    totals:{base:c.base, copies:c.copies, urgent:c.urgent, qr:c.qr, cover:c.cover, box:c.box, credit:c.credit, total:c.total},
+    owner:state.lead||null, invites:[]
+  };
+  try{ localStorage.setItem("vm:order:"+id, JSON.stringify(o)); }catch(_){}
+  return o;
+}
 function renderDone(box){
   const c=calc();
   if(!state.lead){
-    box.innerHTML='<p class="eyebrow">Почти готово</p><p class="qtitle">Куда прислать ссылку на проект?</p><form id="lf" class="datebox"><label for="lname" class="hint">Как вас зовут</label><input type="text" id="lname" required autocomplete="name"><label for="lcontact" class="hint">Телефон или почта</label><input type="text" id="lcontact" required autocomplete="tel"><div class="qnav"><button type="button" class="btn ghost" id="lback">Назад</button><button class="btn" type="submit">Перейти к оплате</button></div></form>';
+    box.innerHTML='<p class="eyebrow">Почти готово</p><p class="qtitle">Куда прислать ссылку на проект?</p><form id="lf" class="datebox"><label for="lname" class="hint">Как вас зовут</label><input type="text" id="lname" name="lname" required autocomplete="name" aria-required="true"><label for="lcontact" class="hint">Телефон или почта</label><input type="text" id="lcontact" name="lcontact" required autocomplete="tel" aria-required="true"><div class="qnav"><button type="button" class="btn ghost" id="lback">Назад</button><button class="btn" type="submit">Перейти к оплате</button></div></form>';
     $("#lback").onclick=()=>{state.done=false;render();};
-    $("#lf").addEventListener("submit",e=>{e.preventDefault();state.lead={n:$("#lname").value.trim(),c:$("#lcontact").value.trim()};render();});
+    $("#lf").addEventListener("submit",e=>{e.preventDefault();
+      state.lead={n:$("#lname").value.trim(),c:$("#lcontact").value.trim()};
+      state.order=makeOrder(); saveQuiz(); render();});
     return;
   }
-  box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p><p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+'. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p><div class="warn"><b>Дальше:</b> добавьте родных — имя и телефон — и отправьте им приглашение в семейный чат.</div><div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button><a class="btn" href="app.html">Открыть редактор</a></div>';
-  $("#restart").onclick=()=>{Object.assign(state,{i:0,pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null,urgentAuto:undefined});render();};
+  if(!state.order) state.order=makeOrder();
+  const o=state.order, link="app.html?order="+o.id;
+  box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p>'+
+    '<p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+
+    '. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p>'+
+    '<div class="warn"><b>Следующий шаг:</b> позовите родных — имя и телефон каждого, — и отправьте приглашение в семейный чат. Можно и пропустить: соберёте книгу сами.</div>'+
+    '<div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button>'+
+    '<a class="btn" href="'+link+'&invite=1">Позвать родных</a></div>'+
+    '<p class="free">Или сразу <a href="'+link+'">откройте редактор</a> и добавьте фото.</p>';
+  $("#restart").onclick=()=>{Object.assign(state,{i:0,pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null,order:null,urgentAuto:undefined});saveQuiz();render();};
 }
 render();
 })();
