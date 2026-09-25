@@ -243,6 +243,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
   <section id="quiz">
     <p class="eyebrow">Подбор книги</p>
     <h2>Узнайте формат и цену за минуту</h2>
+    <p class="hint" id="prevOrder" hidden style="margin:0 0 12px"></p>
     <div class="quiz" id="quizBox" aria-live="polite"></div>
   </section>
 
@@ -289,7 +290,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
 
   <footer>
     <span>«Всем миром» — рабочее название сервиса</span>
-    <a href="app.html">Собрать альбом бесплатно в браузере</a>
+    <a href="app.html?free=1">Собрать альбом бесплатно в браузере</a>
   </footer>
 </div>
 
@@ -330,7 +331,12 @@ const PEOPLE_N={"1":1,"5":4,"12":12,"30":20};
 const SKEY="vm:quiz";
 function saveQuiz(){ try{ localStorage.setItem(SKEY,JSON.stringify(state)); }catch(_){}}
 function loadQuiz(){ try{ return JSON.parse(localStorage.getItem(SKEY)||"null"); }catch(_){ return null; } }
-const state=Object.assign({i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null},loadQuiz()||{});
+const saved=loadQuiz()||{};
+// прошлый заказ не подставляется в новый подбор: он показывается отдельной строкой
+const prevOrder=saved.order||null;
+// подбор всегда начинается с чистого листа: старые ответы не подставляются (баг-лист §4)
+const state={i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,
+  urgent:false,credit:false,done:false,lead:null,order:null};
 const fmt=n=>n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽";
 function daysLeft(){if(!state.a.date)return null;const d=new Date(state.a.date+"T12:00:00");return Math.round((d-new Date())/864e5);}
 function recommend(){
@@ -354,8 +360,16 @@ function scrollToQuiz(){
   const y=el.getBoundingClientRect().top+window.scrollY-90;
   window.scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
 }
+function prevLine(){
+  const el=$("#prevOrder"); if(!el) return;
+  if(!prevOrder||!prevOrder.id){ el.hidden=true; return; }
+  el.hidden=false;
+  el.innerHTML='У вас уже есть '+(prevOrder.title||"книга").toLowerCase()+
+    ' — <a href="app.html?order='+prevOrder.id+'">открыть проект</a>';
+}
 function render(keepScroll){
   saveQuiz();
+  prevLine();
   const box=$("#quizBox");
   if(!keepScroll) setTimeout(scrollToQuiz,30);
   if(state.done) return renderDone(box);
@@ -375,7 +389,7 @@ function renderQ(box){
   h+='<div class="qnav"><button class="btn ghost" id="back" '+(state.i===0?"hidden":"")+'>Назад</button><span></span>';
   if(q.type==="date") h+='<button class="btn" id="next">'+(state.a.date?"Дальше":"Пропустить")+'</button>';
   h+="</div>";
-  if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a></p>';
+  if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html?free=1">Соберите альбом бесплатно в браузере</a></p>';
   box.innerHTML=h;
   box.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.a[q.k]=b.dataset.v;state.i++;render();});
   const d=$("#qdate");if(d)d.onchange=()=>{state.a.date=d.value;render(true);};
@@ -410,7 +424,7 @@ function renderResult(box){
   if(ppl>1)h+='<div class="line"><span>Если скинуться на '+ppl+'</span><span>≈ '+fmt(Math.ceil(c.total/ppl/10)*10)+' с человека</span></div>';
   h+='</div><p class="note">Доставка рассчитывается отдельно.</p>';
   h+='<div class="qnav"><span></span><button class="btn" id="pay">Оплатить '+fmt(c.total)+'</button></div>';
-  h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
+  h+='<p class="free">Не готовы платить сейчас? <a href="app.html?free=1">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
   box.innerHTML=h;
   box.querySelectorAll(".card").forEach(b=>b.onclick=()=>{state.pick=b.dataset.k;render(true);});
   $("#again").onclick=()=>{state.i=0;render();};
@@ -472,7 +486,12 @@ function renderDone(box){
     '<a class="btn" href="'+link+'">Открыть редактор</a></div>'+
     '<p class="free">Ссылка проекта — только ваша: <code>'+link+'</code>. Родным уходит другая, '+
       'по ней они добавляют материалы, но не могут менять заказ и печать: <code>'+ilink+'</code>.</p>';
-  $("#restart").onclick=()=>{Object.assign(state,{i:0,pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null,order:null,urgentAuto:undefined});saveQuiz();render();};
+  $("#restart").onclick=()=>{
+    Object.assign(state,{i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,
+      urgent:false,credit:false,done:false,lead:null,order:null,urgentAuto:undefined});
+    try{ localStorage.removeItem(SKEY); }catch(_){}
+    saveQuiz(); render();
+  };
 }
 render();
 })();

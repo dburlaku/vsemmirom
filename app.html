@@ -34,7 +34,10 @@ h1,h2,h3{text-wrap:balance}
   font-size:11px;font-weight:600;flex:none}
 .modal{position:fixed;inset:0;background:rgba(8,10,13,.72);z-index:88;display:flex;align-items:flex-start;
   justify-content:center;padding:24px 16px;overflow-y:auto}
-.modal .box{background:var(--panel);border-radius:12px;padding:20px;width:min(620px,100%);box-shadow:var(--shadow)}
+.modal .box{background:var(--panel);border-radius:12px;padding:20px;width:min(620px,100%);box-shadow:var(--shadow);
+  max-height:88vh;overflow:auto;position:relative}
+.modal .box .foot.sticky{position:sticky;bottom:-20px;background:var(--panel);
+  padding:12px 0 2px;margin-bottom:-2px;border-top:1px solid var(--line);z-index:2}
 .modal h3{margin:0 0 14px;font-size:19px;font-family:var(--display);font-weight:400;
   text-transform:none;letter-spacing:0;color:var(--ink)}
 .modal .pane{display:none} .modal .pane.on{display:block}
@@ -81,10 +84,16 @@ h1,h2,h3{text-wrap:balance}
   padding:8px 9px;border-radius:var(--r);cursor:pointer;font-family:inherit}
 .more-menu .mi:hover{background:var(--surface-2)}
 .more-menu .note{margin:2px 0 0;font-size:11.5px}
-/* предложение выбора при переполнении (§3.3) */
-.ov-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;
+/* одна строка-чеклист вместо баннеров (баг-лист §5) */
+.todo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 14px;
   font-size:13px;background:var(--surface-2);color:var(--muted);border-bottom:1px solid var(--line)}
-.ov-note .btn{padding:5px 11px;font-size:12.5px}
+.todo b{color:var(--ink);font-weight:600}
+.todo .item{display:inline-flex;align-items:center;gap:6px}
+.todo .item button{border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  font-size:12.5px;padding:4px 10px;border-radius:var(--r-pill);cursor:pointer;font-family:inherit}
+.todo .item button:hover{border-color:var(--accent);color:var(--accent)}
+.todo .done{opacity:.45;text-decoration:line-through}
+.todo .sep{opacity:.4}
 /* полоса роли участника и предупреждение о дедлайне */
 .role-strip,.dl-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
   padding:8px 14px;font-size:13px;border-bottom:1px solid var(--line)}
@@ -657,8 +666,7 @@ h1,h2,h3{text-wrap:balance}
   </header>
   <div class="role-strip" id="roleStrip" hidden></div>
   <div class="dl-note" id="dlNote" hidden></div>
-  <div class="ov-note" id="ovNote" hidden></div>
-  <div class="ov-note" id="cvNote" hidden></div>
+  <div class="todo" id="todoNote" hidden></div>
   <div class="mtabs" id="mtabs">
     <button class="tab" data-m="pages">Страницы</button>
     <button class="tab on" data-m="edit">Правка</button>
@@ -956,9 +964,11 @@ function show(id){
 document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go)));
 $("go-create").addEventListener("click",()=>newAlbum());
 function paidMode(){ return !!state.order; }
+$("a-title").addEventListener("input",e=>{ state.title=e.target.value.trim(); });
+$("a-sub").addEventListener("input",e=>{ state.sub=e.target.value.trim(); });
 $("go-upload").addEventListener("click",()=>{
-  state.title=$("a-title").value.trim()||"Альбом";
-  state.sub=$("a-sub").value.trim();
+  state.title=$("a-title").value.trim()||state.title||"Альбом";
+  state.sub=$("a-sub").value.trim()||state.sub||"";
   show("s-upload");
 });
 
@@ -1731,6 +1741,47 @@ function aiDialog(pageIdx){
   }
 }
 
+/* Классификатор содержимого (Приложение Б ред. 2, §5). Пороги выставлены по замерам:
+   у снимков с камеры осевых границ 0.30–0.58, у скриншотов и отрисованных страниц 0.93–0.97
+   при почти нулевой насыщенности; у фотографии монитора frame 1.00 / sat 0.79 / edge 0.51. */
+function markShots(list){
+  list.forEach(p=>{
+    const axis=p.axis||0, sat=p.sat||0, flat=p.flat||0, edge=p.edgeShare||0;
+    const uiLike = axis>0.82 && (sat>0.45 || flat>0.2) && !(edge>0.75 && flat<0.05);
+    const screenish = screenRatio(p.w,p.h) && axis>0.7 && sat>0.6 && flat>0.1;
+    const fromScreen = (p.frame||0)>=0.6 && sat>=0.72 && edge<0.65 && flat>0.1;
+    const gameShot = screenRatio(p.w,p.h) && (flat>0.3 || axis>0.65) && edge<0.3;
+    const paper = p.mean>196 && sat>0.78 && axis>0.6 && flat>0.06;
+    p.shot=false; p.shotKind="";
+    if(!p.cam && (uiLike || screenish || gameShot)){ p.shot=true; p.shotKind="похоже на скриншот"; }
+    else if(fromScreen){ p.shot=true; p.shotKind="снято с экрана"; }
+    else if(paper && (!p.cam || (sat>0.85 && p.mean>210))){ p.shot=true; p.shotKind="похоже на документ"; }
+    if(p.shot) p.why=p.shotKind;
+  });
+}
+/* Кадры, добавленные после сборки, проходят тот же отбор: у каждого есть категория (§4.5). */
+function classifyNew(list){
+  if(!list.length) return;
+  markShots(list);
+  const T=Object.assign({},qc());
+  const all=state.photos;
+  list.forEach(p=>{
+    if(p.shot) return;
+    // дубль или серия по отношению ко всему набору
+    for(const q of all){
+      if(q===p||q.shot||q.dup) continue;
+      const d=hamming(p.hash,q.hash);
+      if(d<=4){ p.dup=true; p.why="дубль"; break; }
+    }
+    if(p.dup) return;
+    const reasons=[];
+    if(p.sharp<T.sharpMin) reasons.push("нерезкий");
+    if(p.mean<T.meanMin) reasons.push("тёмный");
+    if(p.mean>T.meanMax) reasons.push("пересвеченный");
+    if(p.clip>T.clipMax) reasons.push("провалы и пересветы");
+    if(reasons.length){ p.weak=true; p.why=reasons.join(", "); }
+  });
+}
 async function runScan(){
   show("s-scan");
   $("scanTitle").textContent="Собираю альбом";
@@ -1743,27 +1794,7 @@ async function runScan(){
   phase("read",true); bar(0.3);
 
   // --- не фотографии: скриншоты, карты, переписки (Приложение Б §2.3)
-  // Пороги выставлены по замерам: у снимков с камеры осевых границ 0.30–0.58,
-  // у скриншотов и отрисованных страниц — 0.93–0.97 при почти нулевой насыщенности.
-  photos.forEach(p=>{
-    const axis=p.axis||0, sat=p.sat||0, flat=p.flat||0, edge=p.edgeShare||0;
-    const uiLike = axis>0.82 && (sat>0.45 || flat>0.2) && !(edge>0.75 && flat<0.05);
-    const screenish = screenRatio(p.w,p.h) && axis>0.7 && sat>0.6 && flat>0.1;
-    // Снято с экрана: яркий прямоугольник в тёмной рамке, серые цвета интерфейса и мало
-    // фактуры по кадру. Пороги по замерам: у монитора frame 1.00 / sat 0.79 / edge 0.51,
-    // у живых снимков с похожей рамкой sat не выше 0.71 при frame ниже 0.6.
-    const fromScreen = (p.frame||0)>=0.6 && sat>=0.72 && edge<0.65 && flat>0.1;
-    // Скриншот игры: пропорции экрана телефона, крупные плоские заливки и почти нет фактуры.
-    const gameShot = screenRatio(p.w,p.h) && (flat>0.3 || axis>0.65) && edge<0.3;
-    // документ, чек, QR: очень светлый, почти серый, границы строго по осям
-    const document = p.mean>196 && sat>0.78 && axis>0.6 && flat>0.06;
-    p.shot=false; p.shotKind="";
-    if(!p.cam && (uiLike || screenish || gameShot)){ p.shot=true; p.shotKind="похоже на скриншот"; }
-    else if(fromScreen){ p.shot=true; p.shotKind="снято с экрана"; }
-    else if(document && !p.cam){ p.shot=true; p.shotKind="похоже на документ"; }
-    else if(document && p.cam && sat>0.85 && p.mean>210){ p.shot=true; p.shotKind="похоже на документ"; }
-    if(p.shot) p.why=p.shotKind;
-  });
+  markShots(photos);
   state.report.shots=photos.filter(p=>p.shot).length;
 
   // --- duplicates
@@ -2048,27 +2079,50 @@ function assemble(){
   setBrand(state.title);
   inspector(); trayRender(); updHead(); render(); overflowNote(); coverNote(); saveLocal();
 }
-/* §3.3: когда отобранных кадров сильно больше объёма — предлагаем выбор, а не уплотняем вёрстку */
-function overflowNote(){
-  const el=$("ovNote"); if(!el) return;
-  const n=state.overflow||0, fits=slotCount();
-  if(state.role==="guest"||n<fits*0.5||n<12){ el.hidden=true; el.innerHTML=""; return; }
-  const need=Math.min(200,Math.ceil((fits+n)/3.2/2)*2);
+/* Одна строка «До печати осталось…» вместо стопки баннеров (баг-лист §5).
+   Выполненные пункты гаснут, новые подсказки добавляются сюда же. */
+function overflowNote(){ todoNote(); }
+function coverNote(){ todoNote(); }
+function todoNote(){
+  const el=$("todoNote"); if(!el) return;
+  if(state.role==="guest"||!state.pages.length){ el.hidden=true; el.innerHTML=""; return; }
+  const fits=slotCount(), over=state.overflow||0;
+  const needVol=over>=12&&over>fits*0.5&&!state.volDecided;
+  const items=[];
+  items.push({key:"cover", done:!!state.coverOk, label:"выбрать обложку",
+              act:state.coverOk?null:{id:"tdCover",text:"Выбрать"}});
+  if(state.pending) items.push({key:"add", done:false,
+              label:"встроить "+state.pending+" новых кадров",
+              act:{id:"tdEmbed",text:"Встроить"}});
+  if(needVol||state.volDecided) items.push({key:"vol", done:!!state.volDecided,
+              label:"решить с объёмом: в книге "+fits+", в лотке ещё "+over,
+              act:state.volDecided?null:{id:"tdVol",text:"Решить"}});
+  if(state.order) items.push({key:"inv", done:(state.order.invites||[]).some(p=>p.status!=="draft"&&p.status!=="removed"),
+              label:"позвать родных",
+              act:{id:"tdInv",text:"Позвать"}});
+  const left=items.filter(i=>!i.done).length;
   el.hidden=false;
-  el.innerHTML='<span>Отобрано кадров больше, чем вмещает объём: в книге '+fits+
-    ', в лотке ещё '+n+'. Уплотнять вёрстку не буду — выберите, как поступить.</span>'+
-    '<button class="btn ghost" id="ovMore">Увеличить объём до '+need+' стр.</button>'+
-    '<button class="btn ghost" id="ovBest">Оставить лучшие</button>'+
-    '<button class="btn ghost" id="ovVol">Разделить на тома</button>';
-  $("ovMore").addEventListener("click",()=>{
-    state.target=need; $("npages").value=need; $("pgLabel").textContent=need;
-    assemble(); toast("Объём книги — "+need+" страниц, тариф «"+tierFor(need)+"»");
-  });
-  $("ovBest").addEventListener("click",()=>{
-    el.hidden=true;
-    toast("Оставляю лучшие кадры: остальные ждут в лотке, их можно вернуть по одному");
-  });
-  $("ovVol").addEventListener("click",volumesDialog);
+  el.innerHTML='<b>'+(left?"До печати осталось:":"К печати всё готово:")+'</b>'+
+    items.map((i,k)=>'<span class="item'+(i.done?" done":"")+'">'+esc(i.label)+
+      (i.act&&!i.done?' <button type="button" id="'+i.act.id+'">'+i.act.text+'</button>':'')+'</span>'+
+      (k<items.length-1?'<span class="sep">·</span>':'')).join("");
+  if($("tdCover")) $("tdCover").addEventListener("click",coverDialog);
+  if($("tdEmbed")) $("tdEmbed").addEventListener("click",embedPending);
+  if($("tdInv")) $("tdInv").addEventListener("click",()=>$("edInvite").click());
+  if($("tdVol")) $("tdVol").addEventListener("click",volumeDialog);
+}
+/* решение по объёму: увеличить, оставить лучшие или разделить на тома (§3.3) */
+function volumeDialog(){
+  const fits=slotCount(), over=state.overflow||0;
+  const need=Math.min(200,Math.ceil((fits+over)/3.2/2)*2);
+  confirmBox({title:"Кадров больше, чем вмещает объём",
+    text:"В книге "+fits+" кадров, в лотке ещё "+over+". Уплотнять вёрстку не буду — "+
+      "можно увеличить объём до "+need+" страниц (тариф «"+tierFor(need)+"»), оставить лучшие кадры "+
+      "или разделить архив на тома.",
+    ok:"Увеличить объём до "+need+" стр.",
+    go:()=>{ state.target=need; $("npages").value=need; $("pgLabel").textContent=need;
+      state.volDecided=true; assemble(); toast("Объём книги — "+need+" страниц"); },
+    alt:{label:"Разделить на тома", go:()=>{ state.volDecided=true; volumesDialog(); }}});
 }
 $("go-scan").addEventListener("click",()=>{ runScan().catch(err=>{ crash("сборка",err); show("s-upload"); }); });
 
@@ -2357,13 +2411,16 @@ function coverCandidates(n){
   return out;
 }
 /* подпись на обложке: повод и дата события, а диапазон лет — только у книги-хроники (§4.3) */
+const OCC_DATIVE={"День рождения":"дню рождения","Юбилей":"юбилею","Свадьба":"свадьбе",
+  "Семейный год":"семейному году","Путешествие":"путешествию","Просто так":"этому дню"};
 function coverCaption(){
   const o=state.order;
   if(o&&o.date){
     const occ=(OCCASIONS[o.occasion]||OCCASIONS[state.occasion]||{}).label||"";
     const d=new Date(o.date+"T12:00:00");
-    const when=isNaN(d)?"":d.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"});
-    return (occ?"К "+occ.toLowerCase().replace(/^день рождения$/,"дню рождения"):"")+(when?" · "+when:"");
+    const when=isNaN(d)?"":d.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"}).replace(" г.","");
+    const dat=OCC_DATIVE[occ]||(occ?occ.toLowerCase():"");
+    return (dat?"К "+dat:"")+(when?" · "+when:"");
   }
   const ys=state.photos.filter(p=>p.date).map(p=>new Date(p.date).getUTCFullYear());
   if(!ys.length) return "";
@@ -2371,15 +2428,6 @@ function coverCaption(){
   return a===b?String(a):a+" — "+b;
 }
 function coverPage(){ return state.pages.find(p=>p.type==="cover"); }
-function coverNote(){
-  const el=$("cvNote"); if(!el) return;
-  const need=state.pages.length&&!state.coverOk&&state.role!=="guest";
-  el.hidden=!need;
-  if(!need){ el.innerHTML=""; return; }
-  el.innerHTML='<span><b>Обложку смотрят первой.</b> Сейчас на ней черновик — выберите кадр, '+
-    'без этого книга не уйдёт в печать.</span><button class="btn ghost" id="cvPick">Выбрать обложку</button>';
-  $("cvPick").addEventListener("click",coverDialog);
-}
 function coverDialog(){
   const cands=coverCandidates(9), cp=coverPage();
   if(!cands.length){ toast("Пока не из чего выбирать — добавьте снимки"); return; }
@@ -2391,7 +2439,7 @@ function coverDialog(){
       (cp&&cp.slots[0]===p.id?' data-cur="1"':'')+'><img src="'+p.url+'" alt=""><span>'+
       (p.date?new Date(p.date).toLocaleDateString("ru-RU"):esc(p.name.slice(0,18)))+'</span></button>').join("")+'</div>'+
     '<p class="note" id="cvCap"></p>'+
-    '<div class="foot" style="margin-top:16px">'+
+    '<div class="foot sticky" style="margin-top:16px">'+
     '<button class="btn ghost" id="cvOwn">Выбрать свой кадр</button>'+
     '<button class="btn primary" id="cvOk">Подтвердить обложку</button></div></div>';
   document.body.appendChild(el);
@@ -2403,7 +2451,13 @@ function coverDialog(){
     const ph=state.byId.get(pick);
     $("cvCap").textContent=ph?("Подпись на обложке: "+(coverCaption()||"без подписи")):"";
   };
-  el.querySelectorAll(".cv").forEach(b=>b.addEventListener("click",()=>{ pick=b.dataset.id; paint(); }));
+  el.querySelectorAll(".cv").forEach(b=>b.addEventListener("click",()=>{
+    pick=b.dataset.id;
+    // клик сразу ставит кадр на обложку: человек видит результат, не догадываясь про кнопку
+    const p=coverPage();
+    if(p){ p.slots[0]=pick; p.focal&&(p.focal[0]=null); p.years=coverCaption(); render(); inspector(); }
+    paint();
+  }));
   paint();
   $("cvOwn").addEventListener("click",()=>{
     kill();
@@ -2765,28 +2819,32 @@ function fillEmpty(){
 $("pickMore").addEventListener("change",async e=>{
   const files=[...e.target.files]; e.target.value="";
   if(!files.length) return;
-  let n=state.photos.length;
-  for(const f of files){
-    try{
-      const head=await f.slice(0,262144).arrayBuffer();
-      const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});
-      const a=analyse(bmp);
-      const k=Math.min(1,1100/Math.max(bmp.width,bmp.height));
-      const cv=document.createElement("canvas");
-      cv.width=Math.round(bmp.width*k); cv.height=Math.round(bmp.height*k);
-      cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
-      if(bmp.close) bmp.close();
-      const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.72));
-      const url=URL.createObjectURL(blob);
-      const im=new Image(); im.src=url; await imReady(im);
-      const ph={id:"x"+(n++),name:f.name,size:f.size,date:exifDate(f,head),file:f,url,thumb:im,
-                score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
-                dup:false,weak:false,noHero:false,over:false,why:""};
-      state.photos.push(ph); state.byId.set(ph.id,ph);
-    }catch(_){}
+  const before=new Set(state.photos.map(p=>p.id));
+  await intake(files);                       // тот же путь, что и при первом выборе: HEIC, метрики, счётчики
+  const fresh=state.photos.filter(p=>!before.has(p.id));
+  if(!fresh.length){ toast("Новых кадров не нашлось"); return; }
+  classifyNew(fresh);                        // §4.5: у каждого кадра есть категория
+  state.coverOk=false;                       // §4: набор изменился — обложку подтверждаем заново
+  const fit=fresh.filter(p=>!p.dup&&!p.weak&&!p.shot&&!p.ser).length;
+  const manual=state.pages.filter(p=>p.touched).length;
+  if(!state.pages.length){ trayRender(); return; }
+  if(!manual){                               // ручных правок нет — встраиваем сразу
+    assemble();
+    toast("Добавлено "+files.length+" · в книге теперь "+usedIds().size);
+  }else{
+    state.pending=fit;
+    trayRender(); todoNote();
+    toast("Добавлено "+files.length+" кадров — встроить в книгу можно одной кнопкой");
   }
-  trayRender(); toast("Добавлено снимков: "+files.length);
 });
+/* встроить добавленные кадры, не трогая ручные правки */
+function embedPending(){
+  const filled=fillEmpty();
+  const left=groups().free.length;
+  if(left){ snapshot("перед добавлением новых кадров"); assemble(); }
+  state.pending=0; todoNote();
+  toast(left?"Книга пересобрана с новыми кадрами":"Новые кадры встали на свободные места: "+filled);
+}
 
 
 /* =============================== заказ как сущность (Приложение А ред. 2, §2–§5) */
@@ -3862,7 +3920,18 @@ if(window.__orderMissing){
       "или дождитесь версии с сервером.";
   }
 }
-show(window.__orderMissing ? "s-order" : (window.__orderStart || "s-landing"));
+(async function start(){
+  if(window.__orderMissing){ show("s-order"); return; }
+  if(window.__orderStart){ show(window.__orderStart); return; }
+  if(new URLSearchParams(location.search).get("free")==="1"){ show("s-landing"); return; }
+  // адрес без заказа ведёт в список книг или на лендинг, а не в витрину (баг-лист §6)
+  if(drafts().length){ show("s-albums"); return; }
+  try{
+    const r=await fetch("index.html",{method:"HEAD"});
+    if(r.ok){ location.replace("index.html"); return; }
+  }catch(_){}
+  show("s-landing");
+})();
 })();
 </script>
 </body>
