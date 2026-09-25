@@ -70,6 +70,21 @@ h1,h2,h3{text-wrap:balance}
 .inv-row .btns{flex-direction:row;gap:10px;align-items:center;justify-content:flex-end}
 .inv-row .btns button{white-space:nowrap}
 .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+/* меню «Ещё» в шапке (Приложение Б §4.1) */
+.more{position:relative}
+.more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:260px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:6px}
+.more-menu .field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.more-menu .field select{width:100%}
+.more-menu .mi{text-align:left;border:0;background:none;color:var(--ink);font-size:13.5px;
+  padding:8px 9px;border-radius:var(--r);cursor:pointer;font-family:inherit}
+.more-menu .mi:hover{background:var(--surface-2)}
+.more-menu .note{margin:2px 0 0;font-size:11.5px}
+/* предложение выбора при переполнении (§3.3) */
+.ov-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;
+  font-size:13px;background:var(--surface-2);color:var(--muted);border-bottom:1px solid var(--line)}
+.ov-note .btn{padding:5px 11px;font-size:12.5px}
 /* полоса роли участника и предупреждение о дедлайне */
 .role-strip,.dl-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
   padding:8px 14px;font-size:13px;border-bottom:1px solid var(--line)}
@@ -207,6 +222,8 @@ h1,h2,h3{text-wrap:balance}
   align-items:center;gap:8px 10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 .brand{font-weight:600;white-space:nowrap}
 .brand em{font-style:normal;color:var(--muted);font-weight:400}
+.brand i{font-style:normal;color:var(--muted);font-weight:400;font-size:12px;margin-left:8px}
+.tray .tabs,.card .tabs{flex-wrap:wrap}
 .spacer{flex:1 1 20px}
 .field{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
 .field select,.field input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);font-size:13px}
@@ -251,8 +268,13 @@ h1,h2,h3{text-wrap:balance}
 .slot .nm{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .slot .x{color:var(--muted);padding:2px 5px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer}
 .slot .x:hover{border-color:var(--line);color:var(--danger)}
+.slot img{width:54px;height:40px}
+.slot .acts{display:flex;gap:4px;align-items:center;flex:none}
+.slot .sa{border:1px solid transparent;background:none;color:var(--muted);font-size:11.5px;
+  padding:3px 6px;border-radius:4px;cursor:pointer;font-family:inherit}
+.slot .sa:hover{border-color:var(--line);color:var(--ink)}
 .empty-slot{width:46px;height:34px;border:1px dashed var(--line);border-radius:3px;flex:none}
-.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .tab{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);cursor:pointer;font-size:12px}
 .tab.on{border-color:var(--accent);background:var(--accent-soft)}
 .tray-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:9px;max-height:470px;overflow-y:auto}
@@ -594,31 +616,38 @@ h1,h2,h3{text-wrap:balance}
         <circle cx="20.5" cy="11.1" r="2.9" fill="currentColor"></circle>
       </svg>
     </button>
-    <div class="brand" id="edBrand">Книга <em></em></div>
+    <div class="brand" id="edBrand" title="Нажмите, чтобы переименовать">Книга <em></em></div>
     <div class="ordbar" id="edOrder" hidden></div>
-    <button id="rebuild" class="btn ghost">Пересобрать</button>
-    <label class="btn ghost">Добавить фото<input id="pickMore" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
-    <button id="openReader" class="btn">Просмотр книги</button>
     <span class="spacer"></span>
-    <span class="field">Оформление
-      <select id="edStyle"></select>
-    </span>
-    <span class="field">Формат
-      <select id="edFmt"><option value="square">21×21 см</option><option value="a4">A4</option><option value="a5">A5</option></select>
-    </span>
-    <span class="field">PDF
-      <select id="edDpi">
-        <option value="300">300 dpi · типография</option>
-        <option value="150">150 dpi · посмотреть</option>
-      </select>
-    </span>
-    <button id="edAccess" class="btn ghost" hidden>Доступ</button>
-    <button id="saveProj" class="btn ghost">Сохранить проект</button>
+    <label class="btn ghost" id="addWrap">Добавить фото<input id="pickMore" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+    <button id="edInvite" class="btn ghost" hidden>Позвать родных</button>
+    <button id="openReader" class="btn">Просмотр книги</button>
     <button id="print" class="btn primary">На печать · PDF</button>
+    <div class="more">
+      <button id="edMore" class="btn ghost" aria-haspopup="true" aria-expanded="false">Ещё</button>
+      <div class="more-menu" id="edMoreMenu" hidden>
+        <span class="field"><label for="edStyle">Оформление</label><select id="edStyle"></select></span>
+        <span class="field"><label for="edFmt">Формат</label>
+          <select id="edFmt"><option value="square">21×21 см</option><option value="a4">A4</option><option value="a5">A5</option></select>
+        </span>
+        <button class="mi" id="edAccess" hidden>Доступ к книге</button>
+        <button class="mi" id="rebuild">Пересобрать книгу</button>
+        <button class="mi" id="edHistory">История версий</button>
+        <button class="mi" id="edReport">Отчёт сборки</button>
+        <button class="mi" id="saveProj">Сохранить проект файлом</button>
+        <button class="mi" id="edHelp">Помощь</button>
+        <p class="note" id="edSaved">Все изменения сохранены</p>
+        <select id="edDpi" hidden>
+          <option value="300">300 dpi · типография</option>
+          <option value="150">150 dpi · посмотреть</option>
+        </select>
+      </div>
+    </div>
     <button class="acct" id="acctBtn2"><span class="av" id="acctAv2">?</span></button>
   </header>
   <div class="role-strip" id="roleStrip" hidden></div>
   <div class="dl-note" id="dlNote" hidden></div>
+  <div class="ov-note" id="ovNote" hidden></div>
   <div class="mtabs" id="mtabs">
     <button class="tab" data-m="pages">Страницы</button>
     <button class="tab on" data-m="edit">Правка</button>
@@ -640,13 +669,15 @@ h1,h2,h3{text-wrap:balance}
     <aside class="side">
       <div class="card" id="insp"></div>
       <div class="card">
-        <h3>Не вошли в альбом</h3>
+        <h3>Не вошли в книгу</h3>
         <div class="sum" id="traySum"></div>
         <div class="tabs">
           <button class="tab on" data-tab="all">Все <span id="cAll">0</span></button>
           <button class="tab" data-tab="dupes">Дубли <span id="cDup">0</span></button>
+          <button class="tab" data-tab="series">Серии <span id="cSer">0</span></button>
           <button class="tab" data-tab="weak">Слабые <span id="cWeak">0</span></button>
-          <button class="tab" data-tab="over">Не поместились <span id="cOver">0</span></button>
+          <button class="tab" data-tab="shots">Не фото <span id="cShot">0</span></button>
+          <button class="tab" data-tab="over">Не поместилось <span id="cOver">0</span></button>
           <button class="tab" data-tab="nohero" hidden id="tabNoHero">Без героя <span id="cNoHero">0</span></button>
         </div>
         <div class="tray-grid" id="tray"></div>
@@ -687,6 +718,13 @@ const STYLES={
 /* Пороги качества — настройки, а не константы (§6.1 ТЗ).
    Значения предварительные: калибруются на 200 реальных снимках до старта этапа A. */
 const QC_DEFAULT={sharpMin:5.0, meanMin:42, meanMax:232, clipMax:0.35};
+/* Склейка серий и доля отбраковки — тоже настройки (Приложение Б §2.2, §2.4) */
+const SERIES_DEFAULT={windowSec:90, ham:12};       // окно времени и близость хеша
+const WEAK_SHARE_MAX=0.15;                          // ориентир: слабых не больше 15 %
+function seriesCfg(){
+  try{ return Object.assign({},SERIES_DEFAULT,JSON.parse(localStorage.getItem("vm:series")||"null")||{}); }
+  catch(_){ return Object.assign({},SERIES_DEFAULT); }
+}
 function qc(){
   try{ return Object.assign({},QC_DEFAULT,JSON.parse(localStorage.getItem("vm:qc")||"null")||{}); }
   catch(_){ return Object.assign({},QC_DEFAULT); }
@@ -724,7 +762,8 @@ const state={
   screen:"s-landing",
   title:"", sub:"", occasion:"birthday", style:"tihiy", fmt:"square", target:24,
   files:[], photos:[], byId:new Map(), pages:[], cur:0, selSlot:-1, tab:"all", draftId:null, dirHandle:null, order:null, paid:false,
-  role:"owner", guest:null, guestName:""
+  role:"owner", guest:null, guestName:"",
+  report:null, history:[], overflow:0
 };
 const S=()=>STYLES[state.style];
 const dims=()=>{const f=FORMATS[state.fmt];return{W:f.w,H:f.h,bleed:f.bleed};};
@@ -1059,6 +1098,7 @@ async function intake(list){
     try{
       const head=await f.slice(0,262144).arrayBuffer();
       const date=exifDate(f,head);
+      const cam=exifCamera(head);
       const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});
       const a=analyse(bmp);
       const k=Math.min(1,1100/Math.max(bmp.width,bmp.height));
@@ -1071,7 +1111,8 @@ async function intake(list){
       const im=new Image(); im.src=url; await imReady(im);
       const ph={id:"p"+(photoSeq++),name:f.name,size:f.size,date,file:f,url,thumb:im,
                 score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
-                dup:false,weak:false,noHero:false,over:false,why:""};
+                flat:a.flat,axis:a.axis,sat:a.sat,edgeShare:a.edgeShare,w:a.w,h:a.h,cam:cam,ratio:a.w/a.h,
+                dup:false,weak:false,noHero:false,over:false,ser:false,shot:false,scene:0,why:""};
       state.photos.push(ph); state.byId.set(ph.id,ph);
       known.add(f.name+"|"+f.size);
       upTile(ph);
@@ -1164,6 +1205,45 @@ function phase(name,done){
 function bar(f){ $("scanBar").style.width=Math.round(f*100)+"%"; }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
+function exifCamera(buf){
+  // есть ли в EXIF марка и модель камеры: у скриншотов их нет
+  try{
+    const d=new DataView(buf);
+    if(d.getUint16(0)!==0xFFD8) return false;
+    let off=2;
+    while(off<d.byteLength-4){
+      const mk=d.getUint16(off); if((mk&0xFF00)!==0xFF00) break;
+      const size=d.getUint16(off+2);
+      if(mk===0xFFE1&&d.getUint32(off+4)===0x45786966){
+        const t=off+10, le=d.getUint16(t)===0x4949;
+        const u16=o=>d.getUint16(o,le), u32=o=>d.getUint32(o,le);
+        const base=t+u32(t+4), n=u16(base);
+        let make="",model="";
+        for(let i=0;i<n;i++){
+          const e=base+2+i*12, tag=u16(e), cnt=u32(e+4);
+          if(tag===0x010F||tag===0x0110){
+            const vo=cnt>4?t+u32(e+8):e+8; let v="";
+            for(let k=0;k<Math.min(cnt,32);k++){ const ch=d.getUint8(vo+k); if(ch) v+=String.fromCharCode(ch); }
+            if(tag===0x010F) make=v; else model=v;
+          }
+        }
+        const s=(make+" "+model).toLowerCase();
+        if(!s.trim()) return false;
+        // телефон — тоже камера; скриншот с телефона марку не пишет
+        return true;
+      }
+      if(mk===0xFFDA) break;
+      off+=2+size;
+    }
+  }catch(_){}
+  return false;
+}
+/* Пропорции экранов устройств — один из признаков «не фотографии» (§2.3) */
+function screenRatio(w,h){
+  if(!w||!h) return false;
+  const r=Math.max(w,h)/Math.min(w,h);
+  return [16/9,19.5/9,20/9,18/9,16/10,21/9].some(k=>Math.abs(r-k)<0.02);
+}
 function exifDate(file,buf){
   try{
     const d=new DataView(buf);
@@ -1219,6 +1299,34 @@ function analyse(bmp){
   }
   const contrast=Math.sqrt(varSum/(n*n)), sharp=lap/((n-2)*(n-2));
   const clip=(dark+bright)/(n*n);
+  // доля плоских блоков 8×8: у скриншотов фон и панели однотонные
+  let flatBlocks=0, blocks=0;
+  for(let by=0;by<n;by+=8) for(let bx=0;bx<n;bx+=8){
+    let s1=0,s2=0,cnt=0;
+    for(let y=by;y<Math.min(by+8,n);y++) for(let x=bx;x<Math.min(bx+8,n);x++){
+      const v=g[y*n+x]; s1+=v; s2+=v*v; cnt++;
+    }
+    const m=s1/cnt, sd=Math.sqrt(Math.max(0,s2/cnt-m*m));
+    blocks++; if(sd<3.2) flatBlocks++;
+  }
+  const flat=blocks?flatBlocks/blocks:0;
+  // доля осевых границ: рамки интерфейса строго горизонтальны и вертикальны
+  let edges=0, axial=0;
+  for(let y=1;y<n-1;y++) for(let x=1;x<n-1;x++){
+    const i=y*n+x;
+    const gx=Math.abs(g[i+1]-g[i-1]), gy=Math.abs(g[i+n]-g[i-n]);
+    const mx=Math.max(gx,gy), mn=Math.min(gx,gy);
+    if(mx>14){ edges++; if(mn<mx*0.22) axial++; }
+  }
+  const axis=edges>20?axial/edges:0;
+  const edgeShare=edges/((n-2)*(n-2));
+  // у интерфейсов много серого: насыщенность почти нулевая на большей части кадра
+  let satLow=0;
+  for(let i=0;i<n*n;i++){
+    const r=d[i*4], gg=d[i*4+1], b=d[i*4+2];
+    if(Math.max(r,gg,b)-Math.min(r,gg,b)<12) satLow++;
+  }
+  const sat=satLow/(n*n);
   // dHash 9x8
   const hc=document.createElement("canvas"); hc.width=9; hc.height=8;
   const h2=hc.getContext("2d",{willReadFrequently:true}); h2.drawImage(bmp,0,0,9,8);
@@ -1230,7 +1338,7 @@ function analyse(bmp){
   }
   const score=Math.min(1,sharp/16)*0.52 + Math.min(1,contrast/62)*0.24 + (1-Math.min(1,clip*4))*0.14
             + Math.min(1,(bmp.width*bmp.height)/4e6)*0.10;
-  return {hash:bits, score, sharp, contrast, clip, mean};
+  return {hash:bits, score, sharp, contrast, clip, mean, flat, axis, sat, edgeShare, w:bmp.width, h:bmp.height};
 }
 function hamming(a,b){ let d=0; for(let i=0;i<64;i++) if(a[i]!==b[i]) d++; return d; }
 
@@ -1449,16 +1557,30 @@ async function runScan(){
   await sleep(50);
   const photos=state.photos;
   if(!photos.length){ toast("Сначала выберите снимки"); show("s-upload"); return; }
-  photos.forEach(p=>{ p.dup=false; p.weak=false; p.noHero=false; p.over=false; p.why=""; });
+  photos.forEach(p=>{ p.dup=false; p.weak=false; p.noHero=false; p.over=false;
+                      p.ser=false; p.shot=false; p.scene=0; p.sceneN=0; p.why=""; });
+  state.report={read:photos.length, shots:0, dupes:0, series:0, weak:0, over:0, book:0, calibrated:false};
   phase("read",true); bar(0.3);
+
+  // --- не фотографии: скриншоты, карты, переписки (Приложение Б §2.3)
+  // Пороги выставлены по замерам: у снимков с камеры осевых границ 0.30–0.58,
+  // у скриншотов и отрисованных страниц — 0.93–0.97 при почти нулевой насыщенности.
+  photos.forEach(p=>{
+    const axis=p.axis||0, sat=p.sat||0, flat=p.flat||0, edge=p.edgeShare||0;
+    const uiLike = axis>0.82 && (sat>0.45 || flat>0.2) && !(edge>0.75 && flat<0.05);
+    const screenish = screenRatio(p.w,p.h) && axis>0.7 && sat>0.6 && flat>0.1;
+    p.shot = !p.cam && (uiLike || screenish);     // EXIF камеры снимает подозрение
+    if(p.shot) p.why="похоже на скриншот";
+  });
+  state.report.shots=photos.filter(p=>p.shot).length;
 
   // --- duplicates
   phase("dupes");
   photos.sort((a,b)=>(a.date||0)-(b.date||0));
   for(let i=0;i<photos.length;i++){
-    if(photos[i].dup) continue;
+    if(photos[i].dup||photos[i].shot) continue;
     for(let j=i+1;j<photos.length;j++){
-      if(photos[j].dup) continue;
+      if(photos[j].dup||photos[j].shot) continue;
       const dt=Math.abs((photos[j].date||0)-(photos[i].date||0));
       if(dt>36e5 && photos[j].date && photos[i].date) continue;
       if(hamming(photos[i].hash,photos[j].hash)<=4){
@@ -1470,20 +1592,39 @@ async function runScan(){
     bar(0.3+0.4*(i+1)/photos.length);
     if(i%40===0) await sleep(0);
   }
+  state.report.dupes=photos.filter(p=>p.dup).length;
   phase("dupes",true);
 
   // --- отбраковка по абсолютным порогам (§6.1): доля от выборки здесь не участвует
   phase("quality");
-  const T=qc();
-  photos.filter(p=>!p.dup).forEach(p=>{
-    const reasons=[];
-    if(p.sharp<T.sharpMin) reasons.push("нерезкий");
-    if(p.mean<T.meanMin) reasons.push("тёмный");
-    if(p.mean>T.meanMax) reasons.push("пересвеченный");
-    if(p.clip>T.clipMax) reasons.push("провалы и пересветы");
-    p.weak=reasons.length>0;
-    p.why=reasons.join(", ");
-  });
+  const T=Object.assign({},qc());
+  const live=photos.filter(p=>!p.dup&&!p.shot);
+  const markWeak=()=>{
+    live.forEach(p=>{
+      const reasons=[];
+      if(p.sharp<T.sharpMin) reasons.push("нерезкий");
+      if(p.mean<T.meanMin) reasons.push("тёмный");
+      if(p.mean>T.meanMax) reasons.push("пересвеченный");
+      if(p.clip>T.clipMax) reasons.push("провалы и пересветы");
+      p.weak=reasons.length>0;
+      p.why=reasons.join(", ");
+    });
+    return live.filter(p=>p.weak).length;
+  };
+  let weakN=markWeak();
+  // §2.4: на типовом архиве в «слабые» уходит не больше 10–15 %. Больше — порог не подошёл
+  // к этому архиву (мягкая оптика, плёнка, сканы): опускаем его до 12-го перцентиля резкости
+  // и честно пишем об этом в отчёт сборки.
+  if(live.length>=40 && weakN/live.length>WEAK_SHARE_MAX){
+    const vals=live.map(p=>p.sharp).sort((a,b)=>a-b);
+    const cut=vals[Math.floor(vals.length*0.12)];
+    if(cut<T.sharpMin){
+      T.sharpMin=Math.max(1.2,cut);
+      state.report.calibrated=Math.round(T.sharpMin*10)/10;
+      weakN=markWeak();
+    }
+  }
+  state.report.weak=weakN;
   bar(0.82); await sleep(180); phase("quality",true);
 
   // --- главный герой
@@ -1539,16 +1680,50 @@ async function runScan(){
     $("scanSub").textContent="";
   }
 
+  // --- серии: несколько кадров одной сцены (Приложение Б §2.2)
+  {
+    const S=seriesCfg(), win=S.windowSec*1000;
+    const live=photos.filter(p=>!p.dup&&!p.shot).sort((a,b)=>(a.date||0)-(b.date||0));
+    let sceneId=0, i=0;
+    while(i<live.length){
+      const group=[live[i]]; let j=i+1;
+      while(j<live.length){
+        const prev=group[group.length-1], cur=live[j];
+        const both=prev.date&&cur.date;
+        // оба условия обязательны: время без схожести склеит разные кадры праздника,
+        // схожесть без времени — съёмки разных лет в одном интерьере
+        if(!both || Math.abs(cur.date-prev.date)>win) break;
+        if(hamming(prev.hash,cur.hash)>S.ham) break;
+        group.push(cur); j++;
+      }
+      if(group.length>1){
+        sceneId++;
+        // лучший кадр серии: резкость и общее качество, при равенстве — тот, где нашёлся герой
+        const best=[...group].sort((a,b)=>
+          (a.noHero?1:0)-(b.noHero?1:0) || b.sharp-a.sharp || b.score-a.score)[0];
+        group.forEach(p=>{
+          p.scene=sceneId; p.sceneN=group.length;
+          if(p!==best){ p.ser=true; p.why="серия · ещё "+(group.length-1)+" похожих кадра"; }
+        });
+        best.ser=false; best.why=best.why||"";
+      }
+      i=j;
+    }
+    state.report.series=photos.filter(p=>p.ser).length;
+  }
+
   // --- build
   phase("build");
   assemble();
   bar(1); phase("build",true);
   await sleep(260);
 
-  const good=photos.filter(p=>!p.dup&&!p.weak).length;
+  state.report.book=slotCount();
+  state.report.over=photos.filter(p=>p.over).length;
   show("s-editor");
-  toast("Прочитано "+photos.length+" снимков · в альбом отобрано "+
-        Math.min(good,slotCount())+" · дублей "+photos.filter(p=>p.dup).length);
+  toast("Прочитано "+photos.length+" · в книге "+state.report.book+
+        " · дублей "+state.report.dupes+" · серий "+state.report.series+
+        " · не фото "+state.report.shots+" · слабых "+state.report.weak);
 }
 function slotCount(){ return state.pages.reduce((n,p)=>n+(p.type==="photos"||p.type==="cover"?p.slots.filter(Boolean).length:0),0); }
 
@@ -1560,56 +1735,151 @@ function yearLabel(ids){
   const a=Math.min(...ys), b=Math.max(...ys);
   return a===b?String(a):a+" — "+b;
 }
+/* ---------- раскладка (Приложение Б §3) ---------- */
+const MONTHS=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+function dayKey(t){ if(!t) return "0"; const d=new Date(t); return d.getUTCFullYear()+"."+d.getUTCMonth()+"."+d.getUTCDate(); }
+function dayLabel(t){
+  if(!t) return "";
+  const d=new Date(t);
+  return d.getUTCDate()+" "+MONTHS[d.getUTCMonth()]+" "+d.getUTCFullYear();
+}
+/* ориентация: вертикальные кадры не растягиваются в горизонтальные окна (§3.1) */
+function assignByAspect(kind,list){
+  const rs=rects(kind);
+  const slots=rs.map((r,i)=>({i,a:r.w/r.h})).sort((x,y)=>y.a-x.a);
+  const pool=list.map(p=>({p,a:(p.w&&p.h)?p.w/p.h:1.5}));
+  const out=new Array(rs.length).fill(null);
+  slots.forEach(s=>{
+    if(!pool.length) return;
+    let bi=0,bd=1e9;
+    pool.forEach((c,k)=>{ const d=Math.abs(Math.log(c.a/s.a)); if(d<bd){ bd=d; bi=k; } });
+    out[s.i]=pool.splice(bi,1)[0].p.id;
+  });
+  return out;
+}
+/* сетка не повторяется больше двух страниц подряд (§3.1) */
+function breakRepeat(kind,hist){
+  if(hist.length<2||hist[0]!==kind||hist[1]!==kind) return kind;
+  const alt={quad:"trio",trio:"two",two:"trio",one:"two",full:"one"};
+  return alt[kind]||kind;
+}
 function assemble(){
   const oc=OCCASIONS[state.occasion];
-  let pool=state.photos.filter(p=>!p.dup&&!p.weak&&!p.noHero).sort((a,b)=>(a.date||0)-(b.date||0));
-  if(pool.length<6){  // героя нашлось слишком мало — берём всё годное
-    pool=state.photos.filter(p=>!p.dup&&!p.weak).sort((a,b)=>(a.date||0)-(b.date||0));
-  }
+  const alive=p=>!p.dup&&!p.weak&&!p.shot&&!p.ser;         // пять категорий отбраковки (§2.1)
+  let pool=state.photos.filter(p=>alive(p)&&!p.noHero).sort((a,b)=>(a.date||0)-(b.date||0));
+  if(pool.length<6) pool=state.photos.filter(alive).sort((a,b)=>(a.date||0)-(b.date||0));
   if(!pool.length){ state.pages=[]; return; }
-  const target=Math.max(8,state.target);   // объём идёт от числа кадров (§5.1 ТЗ)
-  // cover: sharpest of the top-scoring, prefer a single-subject-ish (highest score)
+  state.photos.forEach(p=>{ p.over=false; });
+  const target=Math.max(8,state.target);
   const cover=[...pool].sort((a,b)=>b.score-a.score)[0];
   const last=pool[pool.length-1];
   const mid=pool.filter(p=>p!==cover&&p!==last);
-  const years=mid.map(yearOf);
   const ys=pool.map(yearOf).filter(Boolean);
   const span=ys.length?(Math.min(...ys)===Math.max(...ys)?String(Math.min(...ys)):Math.min(...ys)+" — "+Math.max(...ys)):"";
+  const years=[...new Set(ys)].sort();
+  const sections=years.length>1&&years.length<=6&&target>=24;   // разделы по годам (§3.2)
+
   const pages=[];
   pages.push({type:"cover",title:state.title||"Альбом",years:state.sub||span,slots:[cover.id],focal:[]});
   pages.push({type:"text",title:"Несколько слов",body:oc.intro,slots:[],focal:[]});
-  // пустых страниц в макете быть не должно: полос ровно столько, на сколько хватает кадров
-  const nPhoto=Math.max(1,Math.min(target-4,mid.length));
-  let i=0, prevFull=false;
-  for(let p=0;p<nPhoto;p++){
-    const left=nPhoto-p, rest=mid.length-i;
-    const cap=rest>0?Math.ceil(rest/left):1;
+
+  const budget=Math.max(1,target-4);             // обложка, вступление, пожелания, финал
+  const queue=mid.slice();
+  const used=new Set();
+  const hist=[];                                  // последние раскладки
+  let prevScenes=new Set(), prevPrevScenes=new Set();
+  let prevDay=null, prevYear=null, madePages=0, sincePunch=0;
+
+  while(queue.length&&madePages<budget){
+    const left=budget-madePages, rest=queue.length;
+    let cap=Math.max(1,Math.min(4,Math.ceil(rest/Math.max(1,left))));
+    // раздел по годам — отдельная страница перед первым кадром нового года
+    const yNext=yearOf(queue[0]);
+    if(sections&&yNext&&yNext!==prevYear&&madePages>0&&left>2){
+      pages.push({type:"text",title:String(yNext),body:"",slots:[],focal:[],section:true});
+      madePages++; prevYear=yNext; hist.length=0; continue;
+    }
+    if(yNext) prevYear=prevYear||yNext;
+
     let kind=cap>=4?"quad":cap===3?"trio":cap===2?"two":"one";
-    const newYear=i>0&&i<mid.length&&years[i]!==years[i-1];
-    if(rest>1&&(p===0||newYear)&&cap<=3&&!prevFull) kind="full";
-    prevFull=kind==="full";
-    const slots=[]; for(let k=0;k<CAP[kind];k++) slots.push(i<mid.length?mid[i++].id:null);
-    pages.push({type:"photos",layout:kind,slots,year:yearLabel(slots),focal:[]});
+    // акцентный разворот раз в 6–8 страниц (§3.1)
+    if(sincePunch>=6&&rest>1&&left>1){ kind="full"; }
+    else kind=breakRepeat(kind,hist);
+
+    const want=CAP[kind];
+    const picked=[]; const scenes=new Set();
+    for(let k=0;k<queue.length&&picked.length<want;k++){
+      const p=queue[k];
+      // не больше одного кадра сцены на странице и у соседей (§3.1)
+      if(p.scene&&(scenes.has(p.scene)||prevScenes.has(p.scene)||prevPrevScenes.has(p.scene))) continue;
+      picked.push(p); if(p.scene) scenes.add(p.scene);
+    }
+    if(!picked.length) picked.push(queue[0]);
+    picked.forEach(p=>{ const i=queue.indexOf(p); if(i>=0) queue.splice(i,1); used.add(p.id); });
+
+    const slots=assignByAspect(kind,picked);
+    const day=dayKey(picked[0].date);
+    const head=(day!=="0"&&day!==prevDay)?dayLabel(picked[0].date):yearLabel(slots);
+    prevDay=day;
+    pages.push({type:"photos",layout:kind,slots,year:head,focal:[]});
+    hist.unshift(kind); hist.length=Math.min(hist.length,3);
+    prevPrevScenes=prevScenes; prevScenes=scenes;
+    sincePunch=kind==="full"?0:sincePunch+1;
+    madePages++;
   }
-  mid.slice(i).forEach(ph=>{ ph.over=true; });   // §6.1: перцентиль вторичен — это «не поместились»
+
+  // кадры, не вошедшие в объём тарифа (§2.1: «не поместилось в книгу»)
+  queue.forEach(p=>{ p.over=true; p.why=p.why||"не поместилось в книгу"; });
+  state.overflow=queue.length;
+
   pages.push({type:"text",title:oc.closing,body:oc.wishes,sign:"",slots:[],focal:[]});
   pages.push({type:"photos",layout:"full",slots:[last.id],year:"",focal:[]});
-  // пустые места добиваем тем, что осталось: сначала слабые, потом дубли
-  const used=new Set(); pages.forEach(p=>p.slots.forEach(id=>{ if(id) used.add(id); }));
-  const spare=state.photos.filter(p=>!used.has(p.id)&&!p.noHero)
-    .sort((a,b)=>(a.dup?1:0)-(b.dup?1:0)||b.score-a.score);
+
+  // пустые места добиваем тем, что осталось из годного, дубли и слабые не подставляем
+  const inBook=new Set(); pages.forEach(p=>p.slots.forEach(id=>{ if(id) inBook.add(id); }));
+  const spare=state.photos.filter(p=>!inBook.has(p.id)&&alive(p)&&!p.noHero)
+    .sort((a,b)=>b.score-a.score);
   let sp=0;
   pages.forEach(p=>{
     if(p.type!=="photos") return;
     for(let k=0;k<p.slots.length;k++){
-      if(!p.slots[k]&&sp<spare.length){ p.slots[k]=spare[sp++].id; }
+      if(!p.slots[k]&&sp<spare.length){ const ph=spare[sp++]; p.slots[k]=ph.id; ph.over=false; }
     }
     if(!p.year) p.year=yearLabel(p.slots);
   });
+  state.overflow=state.photos.filter(p=>p.over).length;
   state.pages=pages; state.cur=0; state.selSlot=-1;
   $("rail").innerHTML="";
   setBrand(state.title);
-  inspector(); trayRender(); updHead(); render(); saveLocal();
+  inspector(); trayRender(); updHead(); render(); overflowNote(); saveLocal();
+}
+/* §3.3: когда отобранных кадров сильно больше объёма — предлагаем выбор, а не уплотняем вёрстку */
+function overflowNote(){
+  const el=$("ovNote"); if(!el) return;
+  const n=state.overflow||0, fits=slotCount();
+  if(state.role==="guest"||n<fits*0.5||n<12){ el.hidden=true; el.innerHTML=""; return; }
+  const need=Math.min(200,Math.ceil((fits+n)/3.2/2)*2);
+  el.hidden=false;
+  el.innerHTML='<span>Отобрано кадров больше, чем вмещает объём: в книге '+fits+
+    ', в лотке ещё '+n+'. Уплотнять вёрстку не буду — выберите, как поступить.</span>'+
+    '<button class="btn ghost" id="ovMore">Увеличить объём до '+need+' стр.</button>'+
+    '<button class="btn ghost" id="ovBest">Оставить лучшие</button>'+
+    '<button class="btn ghost" id="ovVol">Разделить на тома</button>';
+  $("ovMore").addEventListener("click",()=>{
+    state.target=need; $("npages").value=need; $("pgLabel").textContent=need;
+    assemble(); toast("Объём книги — "+need+" страниц, тариф «"+tierFor(need)+"»");
+  });
+  $("ovBest").addEventListener("click",()=>{
+    el.hidden=true;
+    toast("Оставляю лучшие кадры: остальные ждут в лотке, их можно вернуть по одному");
+  });
+  $("ovVol").addEventListener("click",()=>{
+    const half=Math.ceil(state.photos.filter(p=>!p.dup&&!p.weak&&!p.shot&&!p.ser).length/2);
+    const rest=state.photos.filter(p=>p.over).slice(0,half);
+    rest.forEach(p=>{ p.vol2=true; p.why="второй том"; });
+    toast("Кадры второго тома помечены в лотке. Соберите их отдельной книгой кнопкой «Создать альбом»");
+    el.hidden=true;
+  });
 }
 $("go-scan").addEventListener("click",()=>{ runScan().catch(err=>{ crash("сборка",err); show("s-upload"); }); });
 
@@ -1642,17 +1912,26 @@ function brandHtml(t){
   if(/^(книга|альбом)$/i.test(s)) return esc(s)+" <em></em>";
   return "Книга <em>"+esc(s)+"</em>";
 }
-function setBrand(t){ const el=$("edBrand"); if(el) el.innerHTML=brandHtml(t); }
+function setBrand(t){
+  const el=$("edBrand"); if(!el) return;
+  const occ=(OCCASIONS[state.occasion]||{}).label||"";
+  el.innerHTML=brandHtml(t)+(occ?'<i>'+esc(occ.toLowerCase())+'</i>':'');
+}
 const rowHtml=(l,c)=>'<div class="row"><label>'+l+'</label>'+c+'</div>';
 function slotList(p){
   const n=p.type==="cover"?1:CAP[p.layout];
   let h='<div class="slots">';
   for(let i=0;i<n;i++){
     const ph=state.byId.get(p.slots[i]);
+    const when=ph&&ph.date?new Date(ph.date).toLocaleDateString("ru-RU"):"";
     h+='<div class="slot'+(state.selSlot===i?" on":"")+'" data-s="'+i+'" role="button" tabindex="0">'+
        (ph?'<img src="'+ph.url+'" alt="">':'<span class="empty-slot"></span>')+
-       '<span class="nm">'+(ph?esc(ph.name):"пусто — выберите снимок ниже")+'</span>'+
-       (ph?'<button class="x" title="Убрать">✕</button>':'')+'</div>';
+       '<span class="nm">'+(ph?esc(when||"кадр "+(i+1)):"пусто — выберите снимок в лотке")+'</span>'+
+       (ph?'<span class="acts">'+
+            '<button class="sa" data-a="swap" title="Заменить: выберите снимок в лотке">заменить</button>'+
+            '<button class="sa" data-a="zoom" title="Открыть крупно">крупно</button>'+
+            '<button class="x" data-a="off" title="Убрать со страницы">✕</button></span>':'')+
+       '</div>';
   }
   return h+'</div><p class="note">Выбранный кадр двигается мышью прямо на странице.</p>';
 }
@@ -1680,24 +1959,36 @@ function inspector(){
   box.innerHTML=h;
   if($("inspAI")) $("inspAI").addEventListener("click",()=>aiDialog(state.cur));
   box.querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",()=>{
-    p[el.dataset.k]=el.value;
+    p[el.dataset.k]=el.value; p.touched=true;
     if(p.type==="cover"&&el.dataset.k==="title"){ state.title=el.value; setBrand(el.value); }
     render(); saveLocal();
   }));
   box.querySelectorAll("[data-lay]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.lay;
-    p.layout=k;
+    p.layout=k; p.touched=true;
     while(p.slots.length>CAP[k]) p.slots.pop();
     while(p.slots.length<CAP[k]) p.slots.push(nextFree(p.slots));
     p.focal=(p.focal||[]).slice(0,CAP[k]);
     state.selSlot=-1; inspector(); render(); trayRender(); saveLocal();
   }));
   box.querySelectorAll(".slot").forEach(b=>b.addEventListener("click",e=>{
-    if(e.target.classList.contains("x")) return;
+    if(e.target.dataset&&e.target.dataset.a) return;
     state.selSlot=+b.dataset.s; inspector(); trayRender(); render();
   }));
-  box.querySelectorAll(".slot .x").forEach(b=>b.addEventListener("click",e=>{
-    e.stopPropagation(); const i=+b.parentElement.dataset.s;
+  box.querySelectorAll('[data-a="swap"]').forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    state.selSlot=+b.closest(".slot").dataset.s;
+    inspector(); trayRender(); render();
+    toast("Выберите снимок в лотке справа — он встанет на это место");
+  }));
+  box.querySelectorAll('[data-a="zoom"]').forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const ph=state.byId.get(p.slots[+b.closest(".slot").dataset.s]);
+    if(ph) lightbox(ph);
+  }));
+  box.querySelectorAll('.slot .x').forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation(); const i=+b.closest(".slot").dataset.s;
+    p.touched=true;
     p.slots[i]=null; if(p.focal) p.focal[i]=null;
     const next=nextFree(p.slots);            // дырку сразу закрываем следующим кадром
     if(next) p.slots[i]=next;
@@ -1708,15 +1999,29 @@ function inspector(){
 
 /* =============================== tray */
 function usedIds(){ const s=new Set(); state.pages.forEach(p=>p.slots.forEach(id=>{if(id)s.add(id);})); return s; }
+/* Пять категорий отбраковки (Приложение Б §2.1): дубль, серия, слабый, не фотография,
+   не поместилось. Категория у кадра одна — та, по которой он выбыл раньше всего. */
 function groups(){
   const u=usedIds();
+  const free=p=>!u.has(p.id)&&!p.dup&&!p.shot&&!p.ser&&!p.weak&&!p.noHero&&!p.over;
   return {
-    free:state.photos.filter(p=>!u.has(p.id)&&!p.dup&&!p.weak&&!p.noHero&&!p.over),
-    dupes:state.photos.filter(p=>p.dup&&!u.has(p.id)),
-    weak:state.photos.filter(p=>p.weak&&!p.dup&&!u.has(p.id)),
-    nohero:state.photos.filter(p=>p.noHero&&!p.dup&&!u.has(p.id)),
-    over:state.photos.filter(p=>p.over&&!p.dup&&!p.weak&&!p.noHero&&!u.has(p.id))
+    free:state.photos.filter(free),
+    shots:state.photos.filter(p=>p.shot&&!u.has(p.id)),
+    dupes:state.photos.filter(p=>p.dup&&!p.shot&&!u.has(p.id)),
+    series:state.photos.filter(p=>p.ser&&!p.dup&&!p.shot&&!u.has(p.id)),
+    weak:state.photos.filter(p=>p.weak&&!p.dup&&!p.shot&&!p.ser&&!u.has(p.id)),
+    nohero:state.photos.filter(p=>p.noHero&&!p.dup&&!p.shot&&!p.ser&&!p.weak&&!u.has(p.id)),
+    over:state.photos.filter(p=>p.over&&!p.dup&&!p.shot&&!p.ser&&!p.weak&&!p.noHero&&!u.has(p.id))
   };
+}
+function trayTag(ph){
+  if(ph.shot) return "похоже на скриншот";
+  if(ph.dup) return "дубль";
+  if(ph.ser) return ph.why||"серия";
+  if(ph.weak) return ph.why||"слабый кадр";
+  if(ph.noHero) return "без героя";
+  if(ph.over) return "не поместилось в книгу";
+  return "";
 }
 function nextFree(taken){
   const g=groups().free.filter(p=>!taken.includes(p.id));
@@ -1725,17 +2030,25 @@ function nextFree(taken){
 function trayRender(){
   const g=groups();
   const used=usedIds().size, total=state.photos.length;
+  const r=state.report||{};
+  // счётчики сходятся с отчётом сборки (§4.5): в книге + пять категорий = прочитано
   $("traySum").innerHTML=
-    '<span>в альбоме <b>'+used+'</b> из '+total+'</span>'+
-    '<span>дубли <b>'+state.photos.filter(p=>p.dup).length+'</b></span>'+
-    '<span>слабые <b>'+state.photos.filter(p=>p.weak&&!p.dup).length+'</b></span>'+
-    '<span>не поместились <b>'+state.photos.filter(p=>p.over&&!p.dup&&!p.weak).length+'</b></span>'+
-    (state.heroUsed?'<span>без героя <b>'+state.photos.filter(p=>p.noHero&&!p.dup).length+'</b></span>':'');
-  const all=[...g.free,...g.over,...g.weak,...g.nohero,...g.dupes];
+    '<span>в книге <b>'+used+'</b> из '+total+'</span>'+
+    '<span>дубли <b>'+g.dupes.length+'</b></span>'+
+    '<span>серии <b>'+g.series.length+'</b></span>'+
+    '<span>слабые <b>'+g.weak.length+'</b></span>'+
+    '<span>не фото <b>'+g.shots.length+'</b></span>'+
+    '<span>не поместилось <b>'+g.over.length+'</b></span>'+
+    (state.heroUsed?'<span>без героя <b>'+g.nohero.length+'</b></span>':'')+
+    (r.calibrated?'<span title="Порог резкости подстроен под этот архив">порог резкости '+r.calibrated+'</span>':'');
+  const all=[...g.free,...g.over,...g.series,...g.weak,...g.shots,...g.nohero,...g.dupes];
   $("cAll").textContent=all.length; $("cDup").textContent=g.dupes.length; $("cWeak").textContent=g.weak.length;
   $("cNoHero").textContent=g.nohero.length; $("cOver").textContent=g.over.length;
+  if($("cSer")) $("cSer").textContent=g.series.length;
+  if($("cShot")) $("cShot").textContent=g.shots.length;
   $("tabNoHero").hidden=!state.heroUsed;
   const list=state.tab==="dupes"?g.dupes:state.tab==="weak"?g.weak:
+             state.tab==="series"?g.series:state.tab==="shots"?g.shots:
              state.tab==="nohero"?g.nohero:state.tab==="over"?g.over:all;
   const t=$("tray"); t.innerHTML="";
   list.forEach(ph=>{
@@ -1744,10 +2057,11 @@ function trayRender(){
     im.title="Поставить в выбранный кадр";
     im.addEventListener("click",()=>putInSlot(ph.id));
     fig.appendChild(im);
-    if(ph.dup||ph.weak||ph.noHero||ph.over){
+    const tag=trayTag(ph);
+    if(tag){
       const s=document.createElement("span"); s.className="tag";
-      s.textContent=ph.dup?"дубль":ph.noHero?"без героя":ph.weak?(ph.why||"слабое"):"не поместился";
-      s.title=ph.weak&&ph.why?"Отбраковано: "+ph.why:"";
+      s.textContent=tag;
+      s.title=ph.why?"Причина: "+ph.why:"";
       fig.appendChild(s);
     }
     const z=document.createElement("button");
@@ -1785,7 +2099,10 @@ function putInSlot(id){
   const p=state.pages[state.cur];
   if(!p||state.selSlot<0){ toast("Сначала выберите кадр на странице"); return; }
   p.slots[state.selSlot]=id; if(p.focal) p.focal[state.selSlot]=null;
-  const ph=state.byId.get(id); if(ph){ ph.dup=false; ph.weak=false; }
+  p.touched=true;
+  // кадр вернули руками — снимаем все причины отбраковки, кроме «не фотография»
+  const ph=state.byId.get(id);
+  if(ph){ ph.dup=false; ph.weak=false; ph.ser=false; ph.over=false; ph.noHero=false; ph.why=ph.shot?ph.why:""; }
   render(); inspector(); trayRender(); saveLocal();
 }
 
@@ -1863,7 +2180,159 @@ function updHead(){
 }
 $("edStyle").addEventListener("change",e=>{ state.style=e.target.value; $("rail").innerHTML=""; render(); saveLocal(); });
 $("edFmt").addEventListener("change",e=>{ state.fmt=e.target.value; $("rail").innerHTML=""; render(); updHead(); saveLocal(); });
-$("rebuild").addEventListener("click",()=>{ assemble(); toast("Собрано заново"); });
+/* ---------- меню «Ещё», история версий, опасные действия (Приложение Б §4) ---------- */
+function moreMenu(open){
+  const m=$("edMoreMenu"), b=$("edMore");
+  const on=open===undefined?m.hidden:open;
+  m.hidden=!on; b.setAttribute("aria-expanded",on?"true":"false");
+}
+$("edMore").addEventListener("click",e=>{ e.stopPropagation(); moreMenu(); });
+document.addEventListener("click",e=>{
+  if(!$("edMoreMenu").hidden && !$("edMoreMenu").contains(e.target) && e.target!==$("edMore")) moreMenu(false);
+});
+$("edHelp").addEventListener("click",()=>{ moreMenu(false); helpDialog(); });
+$("edHistory").addEventListener("click",()=>{ moreMenu(false); historyDialog(); });
+$("edReport").addEventListener("click",()=>{ moreMenu(false); reportDialog(); });
+$("edInvite").addEventListener("click",()=>{
+  const o=state.order;
+  if(o&&!o.access.collect){
+    confirmBox({title:"Сбор закрыт",
+      text:"Чтобы позвать ещё людей, нужно открыть сбор заново: участники снова смогут добавлять фото и править свои развороты, ссылка-приглашение начнёт работать.",
+      ok:"Открыть сбор и позвать",go:()=>{
+        o.access.collect=true; o.access.invite=true; o.revoked=false; o.frozen=false;
+        tokenDrop(o.inviteToken); o.inviteToken=rnd(12);
+        logAct(o,"сбор открыт снова","из шапки редактора");
+        projCard(); orderBar(); applyRole(); invRender(); show("s-invite");
+      }});
+    return;
+  }
+  invRender(); show("s-invite");
+});
+/* переименование книги прямо из шапки (§4.1) */
+$("edBrand").addEventListener("click",()=>{
+  if(state.role==="guest") return;
+  const v=prompt("Название книги",state.title||"");
+  if(v===null) return;
+  state.title=v.trim()||state.title;
+  const cov=state.pages.find(p=>p.type==="cover"); if(cov) cov.title=state.title;
+  if(state.order){ state.order.title=state.title; saveOrder(state.order); }
+  setBrand(state.title); projCard(); render(); inspector(); saveLocal();
+});
+/* история версий: точка перед каждой пересборкой (§4.3) */
+function snapshot(label){
+  state.history=state.history||[];
+  if(!state.pages.length) return;
+  state.history.unshift({t:Date.now(),label:label,title:state.title,
+    pages:JSON.stringify(state.pages)});
+  state.history.length=Math.min(state.history.length,12);
+}
+function historyDialog(){
+  const h=state.history||[];
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>История версий</h3>'+
+    (h.length?'<div class="acc-list">'+h.map((v,i)=>'<div class="acc-row"><span>'+esc(v.label)+
+      '<em>'+new Date(v.t).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+
+      ' · '+JSON.parse(v.pages).length+' стр.</em></span><button type="button" data-v="'+i+'">вернуться</button></div>').join("")+'</div>'
+      :'<p class="note">Пока одна версия — та, что на экране. Точка появляется перед каждой пересборкой.</p>')+
+    '<div class="foot" style="margin-top:16px"><span class="note">Версии живут в этом браузере</span>'+
+    '<button class="btn primary" id="hClose">Закрыть</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("hClose").addEventListener("click",kill);
+  el.querySelectorAll("[data-v]").forEach(b=>b.addEventListener("click",()=>{
+    const v=h[+b.dataset.v];
+    snapshot("перед возвратом к версии");
+    state.pages=JSON.parse(v.pages); state.title=v.title||state.title; state.cur=0; state.selSlot=-1;
+    $("rail").innerHTML=""; setBrand(state.title);
+    inspector(); trayRender(); updHead(); render(); saveLocal();
+    kill(); toast("Вернулся к версии от "+new Date(v.t).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}));
+  }));
+}
+/* Отчёт сборки (Приложение Б §4.5, §5): счётчики сходятся с тем, что в лотке */
+function buildReport(){
+  const g=groups(), r=state.report||{}, inBook=usedIds().size;
+  const cat={dupes:g.dupes.length, series:g.series.length, weak:g.weak.length,
+             shots:g.shots.length, over:g.over.length, nohero:g.nohero.length, free:g.free.length};
+  const sum=inBook+cat.dupes+cat.series+cat.weak+cat.shots+cat.over+cat.nohero+cat.free;
+  return {read:state.photos.length, book:inBook, cat, sum, ok:sum===state.photos.length,
+    weakShare:state.photos.length?Math.round(cat.weak/state.photos.length*1000)/10:0,
+    calibrated:r.calibrated||false,
+    pages:state.pages.map(p=>({type:p.type, layout:p.layout||"", head:p.year||"",
+      slots:(p.slots||[]).map(id=>{ const ph=state.byId.get(id);
+        return ph?{name:ph.name, scene:ph.scene||0, shot:!!ph.shot, weak:!!ph.weak}:null; })}))};
+}
+window.__report=buildReport;     // читается приёмкой и отчётом в интерфейсе
+function reportDialog(){
+  const r=buildReport();
+  const el=document.createElement("div"); el.className="modal";
+  const row=(k,v)=>'<div class="acc-row"><span>'+k+'</span><b>'+v+'</b></div>';
+  el.innerHTML='<div class="box"><h3>Отчёт сборки</h3><div class="acc-list">'+
+    row("прочитано кадров",r.read)+row("в книге",r.book)+
+    row("дубли",r.cat.dupes)+row("серии",r.cat.series)+row("слабые",r.cat.weak+" ("+r.weakShare+" %)")+
+    row("не фотографии",r.cat.shots)+row("не поместилось в книгу",r.cat.over)+
+    (state.heroUsed?row("без героя",r.cat.nohero):"")+row("свободны в лотке",r.cat.free)+
+    '</div><p class="note">'+(r.ok
+      ? "Сумма сходится: в книге и в лотке ровно столько кадров, сколько прочитано."
+      : "<b>Расхождение:</b> сумма по категориям "+r.sum+" против прочитанных "+r.read+".")+
+    (r.calibrated?" Порог резкости подстроен под этот архив: "+r.calibrated+".":"")+'</p>'+
+    '<div class="foot" style="margin-top:16px"><span class="note">Причина отбраковки видна на карточке в лотке</span>'+
+    '<button class="btn primary" id="rpClose">Закрыть</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("rpClose").addEventListener("click",kill);
+}
+function helpDialog(){
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>Как это работает</h3>'+
+    '<p class="note" style="font-size:13.5px">Снимки читаются в этой вкладке и никуда не уходят. Сервис отбрасывает дубли, '+
+    'серии почти одинаковых кадров, нерезкие и тёмные снимки и то, что похоже на скриншот, а остальное раскладывает по датам.</p>'+
+    '<p class="note" style="font-size:13.5px">Всё отбракованное лежит в лотке справа с причиной — любой кадр возвращается в книгу '+
+    'одним нажатием: выберите место на странице, затем снимок в лотке.</p>'+
+    '<p class="note" style="font-size:13.5px">Текст на странице правится в панели слева, фото двигается мышью прямо на развороте. '+
+    'Кнопка «На печать» собирает PDF с вылетами.</p>'+
+    '<div class="foot" style="margin-top:16px"><span class="note">Вопросы — help@vsemmirom.ru</span>'+
+    '<button class="btn primary" id="hlClose">Понятно</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("hlClose").addEventListener("click",kill);
+}
+/* §4.3: пересборка называет последствия и предлагает щадящий вариант */
+$("rebuild").addEventListener("click",()=>{
+  moreMenu(false);
+  const manual=state.pages.filter(p=>p.type==="photos"&&p.touched).length;
+  const empty=state.pages.filter(p=>p.type==="photos"&&p.slots.some(x=>!x)).length;
+  confirmBox({title:"Пересобрать книгу?",
+    text:"Страницы соберутся заново по датам: "+(manual
+      ? "вручную вы правили "+plural(manual,"страницу","страницы","страниц")+" — эти правки будут перестроены."
+      : "ручных правок пока нет.")+
+      " Перед пересборкой сохраню точку в истории версий, к ней можно вернуться."+
+      (empty?" Незаполненных страниц: "+empty+".":""),
+    ok:"Пересобрать всё",
+    go:()=>{ snapshot("перед полной пересборкой"); assemble(); toast("Книга собрана заново"); },
+    alt:empty?{label:"Только незаполненные",go:()=>{
+      snapshot("перед пересборкой незаполненных");
+      fillEmpty(); toast("Заполнил пустые места, ручные правки на месте");
+    }}:null});
+});
+/* добор только пустых мест — ручные страницы не трогаем */
+function fillEmpty(){
+  const used=usedIds();
+  const spare=state.photos.filter(p=>!used.has(p.id)&&!p.dup&&!p.weak&&!p.shot&&!p.ser&&!p.noHero)
+    .sort((a,b)=>b.score-a.score);
+  let i=0, filled=0;
+  state.pages.forEach(p=>{
+    if(p.type!=="photos") return;
+    for(let k=0;k<p.slots.length;k++){
+      if(!p.slots[k]&&i<spare.length){ p.slots[k]=spare[i].id; spare[i].over=false; i++; filled++; }
+    }
+    if(!p.year) p.year=yearLabel(p.slots);
+  });
+  inspector(); trayRender(); updHead(); render(); saveLocal();
+  return filled;
+}
 $("pickMore").addEventListener("change",async e=>{
   const files=[...e.target.files]; e.target.value="";
   if(!files.length) return;
@@ -2002,7 +2471,15 @@ function applyRole(){
   const guest=state.role==="guest", o=state.order;
   const hide=(id,v)=>{ const el=$(id); if(el) el.hidden=!!v; };
   hide("rebuild",guest); hide("delPage",guest); hide("addPage",guest);
-  hide("print",guest); hide("saveProj",guest);
+  hide("print",guest); hide("edHistory",guest);
+  // в оплаченном проекте проект сохраняется сам (§4.4)
+  hide("saveProj",guest||state.paid);
+  const saved=$("edSaved"); if(saved) saved.hidden=!state.paid||guest;
+  hide("edInvite",guest||!o);
+  const inv=$("edInvite");
+  if(inv&&o){ inv.textContent=o.access.collect?"Позвать родных":"Позвать родных (сбор закрыт)"; }
+  // разрешение печати определяется тарифом, а не переключателем (§4.4)
+  const dpi=$("edDpi"); if(dpi) dpi.value=state.paid?"300":"150";
   const fmt=$("edFmt"); if(fmt) fmt.disabled=guest;
   const acc=$("edAccess"); if(acc) acc.hidden=guest||!o;
   const strip=$("roleStrip");
@@ -2050,15 +2527,21 @@ function orderBar(){
   if(!o){ el.innerHTML=""; el.hidden=true; return; }
   const dl=deadlineFor(o), guest=state.role==="guest";
   el.hidden=false;
-  el.innerHTML=(guest?'<span>книга собирается вместе</span>'
-                    :'<span><b>'+esc(o.tier||"")+'</b> · '+tierRange(o.tier)+'</span>')+
-    (guest?'':(state.paid?'<span style="color:var(--accent)"><b>оплачено</b></span>':'<span>ожидает оплаты</span>'))+
-    (o.date?'<span>событие '+ruDate(o.date)+'</span>':'')+
-    (dl?'<span'+(dl.left<0?' style="color:var(--danger)"':dl.left<=3?' style="color:var(--accent)"':'')+'>'+
-        (dl.left<0?'срок сбора вышел':'сдать до '+ruDate(dl.date))+'</span>':'')+
-    (o.access.collect?'':'<span style="color:var(--danger)">сбор закрыт</span>')+
-    (guest?'':'<button class="btn ghost" id="barInv" style="padding:4px 10px;font-size:12px">Позвать родных</button>');
-  if($("barInv")) $("barInv").addEventListener("click",()=>{ invRender(); show("s-invite"); });
+  // одна фраза вместо набора плашек, нейтральным цветом (§4.2)
+  const bits=[];
+  if(!guest) bits.push('<b>'+esc(o.tier||"")+'</b> · '+tierRange(o.tier)+(state.paid?", оплачено":", ожидает оплаты"));
+  else bits.push("книга собирается вместе");
+  if(o.date) bits.push("событие "+ruDate(o.date));
+  if(!o.access.collect) bits.push("сбор закрыт"+(o.closedAt?" "+ruDate(new Date(o.closedAt)):""));
+  else if(dl) bits.push(dl.left<0?"срок сбора вышел":"сбор до "+ruDate(dl.date));
+  el.innerHTML='<span>'+bits.join(" · ")+'</span>'+
+    (!guest&&(!o.access.collect||(dl&&dl.left<=3))
+      ? '<button class="btn ghost" id="barExtend" style="padding:4px 10px;font-size:12px">'+
+        (o.access.collect?"Продлить сбор":"Открыть сбор")+'</button>' : '');
+  if($("barExtend")) $("barExtend").addEventListener("click",()=>{
+    if(o.access.collect){ const b=$("dlExtend"); if(b) b.click(); else toast("Срок ещё не поджимает"); }
+    else $("edInvite").click();
+  });
   deadlineNote();
 }
 /* §5.2: предупреждение за 3 дня и продление */
@@ -2249,11 +2732,13 @@ function confirmBox(op){
   const el=document.createElement("div"); el.className="modal";
   el.innerHTML='<div class="box"><h3>'+esc(op.title)+'</h3><p class="note" style="font-size:14px">'+op.text+'</p>'+
     '<div class="foot" style="margin-top:18px"><button class="btn ghost" id="cbNo">Отмена</button>'+
+    (op.alt?'<button class="btn ghost" id="cbAlt">'+esc(op.alt.label)+'</button>':'')+
     '<button class="btn '+(op.danger?"danger":"primary")+'" id="cbYes">'+esc(op.ok||"Продолжить")+'</button></div></div>';
   document.body.appendChild(el);
   const kill=()=>el.remove();
   el.addEventListener("click",e=>{ if(e.target===el) kill(); });
   $("cbNo").addEventListener("click",kill);
+  if(op.alt&&$("cbAlt")) $("cbAlt").addEventListener("click",()=>{ kill(); op.alt.go(); });
   $("cbYes").addEventListener("click",()=>{ kill(); op.go(); });
 }
 function accessDialog(){
