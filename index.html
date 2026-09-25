@@ -311,7 +311,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
 
   <footer>
     <span>«Всем миром» — рабочее название сервиса</span>
-    <a href="app/">Собрать альбом бесплатно в браузере</a>
+    <a href="app.html">Собрать альбом бесплатно в браузере</a>
   </footer>
 </div>
 
@@ -386,7 +386,7 @@ function renderQ(box){
   h+='<div class="qnav"><button class="btn ghost" id="back" '+(state.i===0?"hidden":"")+'>Назад</button><span></span>';
   if(q.type==="date") h+='<button class="btn" id="next">'+(state.a.date?"Дальше":"Пропустить")+'</button>';
   h+="</div>";
-  if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app/">Соберите альбом бесплатно в браузере</a></p>';
+  if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a></p>';
   box.innerHTML=h;
   box.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.a[q.k]=b.dataset.v;state.i++;render();});
   const d=$("#qdate");if(d)d.onchange=()=>{state.a.date=d.value;render();};
@@ -421,7 +421,7 @@ function renderResult(box){
   if(ppl>1)h+='<div class="line"><span>Если скинуться на '+ppl+'</span><span>≈ '+fmt(Math.ceil(c.total/ppl/10)*10)+' с человека</span></div>';
   h+='</div><p class="note">Доставка рассчитывается отдельно.</p>';
   h+='<div class="qnav"><span></span><button class="btn" id="pay">Оплатить '+fmt(c.total)+'</button></div>';
-  h+='<p class="free">Не готовы платить сейчас? <a href="app/">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
+  h+='<p class="free">Не готовы платить сейчас? <a href="app.html">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
   box.innerHTML=h;
   box.querySelectorAll(".card").forEach(b=>b.onclick=()=>{state.pick=b.dataset.k;render();});
   $("#again").onclick=()=>{state.i=0;render();};
@@ -443,7 +443,7 @@ function renderDone(box){
     $("#lf").addEventListener("submit",e=>{e.preventDefault();state.lead={n:$("#lname").value.trim(),c:$("#lcontact").value.trim()};render();});
     return;
   }
-  box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p><p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+'. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p><div class="warn"><b>Дальше:</b> добавьте родных — имя и телефон — и отправьте им приглашение в семейный чат.</div><div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button><a class="btn" href="app/">Открыть редактор</a></div>';
+  box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p><p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+'. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p><div class="warn"><b>Дальше:</b> добавьте родных — имя и телефон — и отправьте им приглашение в семейный чат.</div><div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button><a class="btn" href="app.html">Открыть редактор</a></div>';
   $("#restart").onclick=()=>{Object.assign(state,{i:0,pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null,urgentAuto:undefined});render();};
 }
 render();
