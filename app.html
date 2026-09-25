@@ -65,6 +65,55 @@ h1,h2,h3{text-wrap:balance}
 .inv-add input{padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
 .ordbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .ordbar b{color:var(--ink);font-weight:600}
+.inv-row span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.inv-row em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.inv-row .btns{flex-direction:row;gap:10px;align-items:center;justify-content:flex-end}
+.inv-row .btns button{white-space:nowrap}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+/* полоса роли участника и предупреждение о дедлайне */
+.role-strip,.dl-note{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:8px 14px;font-size:13px;border-bottom:1px solid var(--line)}
+.role-strip{background:var(--surface-2);color:var(--muted)}
+.role-strip b{color:var(--ink)}
+.role-strip span{color:var(--muted)}
+.dl-note{background:var(--note);color:var(--note-ink)}
+.dl-note .btn{margin-left:auto}
+/* меню доступа */
+.sw{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.sw label{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r);padding:10px 12px;cursor:pointer}
+.sw label span{display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.sw em{font-style:normal;font-size:12px;color:var(--muted)}
+.acc-list{display:flex;flex-direction:column;gap:6px}
+.acc-row{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13.5px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px}
+.acc-row span{display:flex;flex-direction:column}
+.acc-row em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.acc-row button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12.5px}
+.acc-row button:hover{color:var(--danger)}
+.acc-acts{display:flex;gap:8px;flex-wrap:wrap}
+.acc-log{margin:0;padding-left:18px;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.acc-log b{color:var(--ink);font-weight:600}
+/* экран приглашённого */
+.guest{max-width:760px;margin:0 auto;padding:clamp(20px,4vw,44px) 16px}
+.guest .lead{font-family:var(--display);font-size:clamp(24px,4.2vw,34px);line-height:1.15;margin:0 0 10px;color:var(--ink)}
+.guest .book{font-family:var(--display);font-size:20px;color:var(--accent);margin:0 0 18px}
+.guest .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.guest .stats span{font-size:12.5px;padding:5px 12px;border-radius:var(--r-pill);background:var(--surface-2);color:var(--muted)}
+.guest .stats b{color:var(--ink)}
+.spreads{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+@media (max-width:560px){.spreads{grid-template-columns:1fr 1fr}.spreads div:last-child{display:none}}
+.spreads div{aspect-ratio:2/1;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:5px;box-shadow:var(--shadow)}
+.spreads i{display:block;border-radius:2px;background:var(--ph1)}
+.spreads div i:nth-child(2){background:var(--ph2)}
+.spreads div:nth-child(2) i{background:var(--ph3)}
+.spreads div:nth-child(2) i:nth-child(2){background:var(--ph4)}
+.spreads div:nth-child(3) i{background:var(--ph5)}
+.guest .ask{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:16px 18px;margin-bottom:18px;box-shadow:var(--shadow)}
+.guest .ask h3{margin:0 0 6px;font-size:15px;text-transform:none;letter-spacing:0;color:var(--ink)}
+.guest .ask p{margin:0 0 4px;font-size:13.5px;color:var(--muted)}
 
 /* список альбомов */
 .albums{max-width:1100px;margin:0 auto;padding-block:clamp(20px,4vw,40px)}
@@ -356,11 +405,11 @@ h1,h2,h3{text-wrap:balance}
 <section id="s-order" hidden>
   <div class="wizard">
     <div class="panel">
-      <h2>Не нашли этот заказ</h2>
-      <p class="sub">Ссылка испорчена или заказ открывали в другом браузере. Заказы живут в том браузере, где их создали.</p>
+      <h2 id="orderH">Не нашли этот заказ</h2>
+      <p class="sub" id="orderMsg">Ссылка испорчена или заказ открывали в другом браузере. Заказы живут в том браузере, где их создали.</p>
       <div class="actions">
         <button class="btn ghost" data-go="s-landing">Открыть бесплатный конструктор</button>
-        <a class="btn primary" href="index.html#quiz">Вернуться к подбору книги</a>
+        <a class="btn primary" id="orderHelp" href="mailto:help@vsemmirom.ru?subject=%D0%9D%D0%B5%20%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D0%B2%D0%B0%D0%B5%D1%82%D1%81%D1%8F%20%D0%BA%D0%BD%D0%B8%D0%B3%D0%B0">Написать в поддержку</a>
       </div>
     </div>
   </div>
@@ -385,13 +434,45 @@ h1,h2,h3{text-wrap:balance}
       </div>
       <div class="f">
         <label for="invText">Текст для семейного чата</label>
-        <textarea id="invText" rows="4"></textarea>
+        <textarea id="invText" rows="5"></textarea>
+        <p class="note" id="invLinkNote"></p>
         <p class="note" id="invCopied"></p>
+        <p class="note">Кнопка «ссылка» в строке участника даёт личное приглашение: по нему видно, кто прислал
+          материалы, а кому стоит напомнить. Приглашать других участники не могут — только вы.</p>
       </div>
       <div class="actions">
         <button class="btn ghost" id="invSkip">Соберу сам, приглашу позже</button>
         <button class="btn primary" id="invSend">Отправить приглашения</button>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 0c. вход по приглашению (§3) ============ -->
+<section id="s-guest" hidden>
+  <div class="guest">
+    <p class="eyebrow">Вас позвали в книгу</p>
+    <h1 class="lead" id="gvWho">Организатор собирает книгу</h1>
+    <p class="book" id="gvTitle">Книга историй</p>
+    <div class="stats" id="gvStats"></div>
+    <div class="spreads" aria-hidden="true">
+      <div><i></i><i></i></div><div><i></i><i></i></div><div><i></i><i></i></div>
+    </div>
+    <p class="fine">Так выглядят развороты: слева фото, справа подпись от того, кто его прислал.
+      Обложка и порядок страниц собираются сами, организатор потом правит.</p>
+    <div class="ask">
+      <h3>Что нужно от вас</h3>
+      <p>5–10 фотографий и пара слов к ним. Это занимает около пяти минут.</p>
+      <p>Регистрация не нужна: имя спросим один раз, когда вы сохраните первые фото.</p>
+      <p>Материалы видят только участники книги. Ссылка не индексируется поисковиками,
+        печатью и составом заказа распоряжается организатор.</p>
+      <p id="gvClosed" hidden><b>Организатор закрыл сбор.</b> Спасибо за фото — книга уже готовится
+        к печати, её можно посмотреть, но добавить что-то новое уже нельзя.</p>
+    </div>
+    <input id="gvName" type="hidden">
+    <div class="cta">
+      <button class="btn primary big" id="gvAdd">Добавить фото</button>
+      <button class="btn big" id="gvLook">Сначала посмотрю</button>
     </div>
   </div>
 </section>
@@ -531,10 +612,13 @@ h1,h2,h3{text-wrap:balance}
         <option value="150">150 dpi · посмотреть</option>
       </select>
     </span>
+    <button id="edAccess" class="btn ghost" hidden>Доступ</button>
     <button id="saveProj" class="btn ghost">Сохранить проект</button>
     <button id="print" class="btn primary">На печать · PDF</button>
     <button class="acct" id="acctBtn2"><span class="av" id="acctAv2">?</span></button>
   </header>
+  <div class="role-strip" id="roleStrip" hidden></div>
+  <div class="dl-note" id="dlNote" hidden></div>
   <div class="mtabs" id="mtabs">
     <button class="tab" data-m="pages">Страницы</button>
     <button class="tab on" data-m="edit">Правка</button>
@@ -639,7 +723,8 @@ const OCCASIONS={
 const state={
   screen:"s-landing",
   title:"", sub:"", occasion:"birthday", style:"tihiy", fmt:"square", target:24,
-  files:[], photos:[], byId:new Map(), pages:[], cur:0, selSlot:-1, tab:"all", draftId:null, dirHandle:null, order:null, paid:false
+  files:[], photos:[], byId:new Map(), pages:[], cur:0, selSlot:-1, tab:"all", draftId:null, dirHandle:null, order:null, paid:false,
+  role:"owner", guest:null, guestName:""
 };
 const S=()=>STYLES[state.style];
 const dims=()=>{const f=FORMATS[state.fmt];return{W:f.w,H:f.h,bleed:f.bleed};};
@@ -811,7 +896,7 @@ function drawRail(onlyCur){
 
 /* =============================== screens */
 function show(id){
-  ["s-landing","s-albums","s-order","s-invite","s-setup","s-upload","s-scan","s-editor"].forEach(x=>{ $(x).hidden=(x!==id); });
+  ["s-landing","s-albums","s-order","s-invite","s-guest","s-setup","s-upload","s-scan","s-editor"].forEach(x=>{ $(x).hidden=(x!==id); });
   $("siteHeader").hidden = id==="s-editor";
   if(id==="s-albums") albumsRender();
   state.screen=id;
@@ -952,6 +1037,10 @@ function upCounts(){
   volumeHint();
 }
 async function intake(list){
+  if(state.role==="guest"){
+    if(state.order&&!state.order.access.collect){ toast("Организатор закрыл сбор — материалы уже не принимаются"); return; }
+    await askGuest();
+  }
   const files=[...list].filter(f=>/\.(jpe?g|png|webp)$/i.test(f.name));
   skippedHeic+=[...list].filter(f=>/\.(heic|heif)$/i.test(f.name)).length;
   upSkipText();
@@ -993,6 +1082,7 @@ async function intake(list){
   }
   intakeBusy=false; upCounts();
   $("upBar").style.width="100%";
+  if(state.role==="guest"&&files.length) guestCount(files.length);
 }
 /* --- выбор папки: сначала современный File System Access, иначе старый input --- */
 const FS_OK = typeof window.showDirectoryPicker==="function";
@@ -1790,30 +1880,101 @@ $("pickMore").addEventListener("change",async e=>{
 });
 
 
-/* =============================== заказ как сущность (Приложение А, §2) */
+/* =============================== заказ как сущность (Приложение А ред. 2, §2–§5) */
 const TIER_START={"Момент":24,"Глава":48,"Жизнь":81,"С редактором":81};
 const OCC_BY_KEY={mom:"jubilee",wedding:"wedding",work:"other",grad:"family",other:"other"};
+const INV_LIMIT=20;                       // §4: лимит участников по тарифу
+const BURST_N=8, BURST_MS=10*60*1000;     // §4: защита от расползания общей ссылки
 function orderKey(id){ return "vm:order:"+id; }
+function rnd(n){ let s=""; while(s.length<n) s+=Math.random().toString(36).slice(2); return s.slice(0,n); }
+function tokenMap(){ try{ return JSON.parse(localStorage.getItem("vm:tokens")||"{}")||{}; }catch(_){ return {}; } }
+function tokenSave(m){ try{ localStorage.setItem("vm:tokens",JSON.stringify(m)); }catch(_){} }
+function tokenSet(tok,rec){ if(!tok) return; const m=tokenMap(); m[tok]=rec; tokenSave(m); }
+function tokenDrop(tok){ if(!tok) return; const m=tokenMap(); delete m[tok]; tokenSave(m); }
+function tokenFind(tok){ return tokenMap()[tok]||null; }
+
+/* модель ред. 2: токены приглашений, доступ, журнал */
+function migrateOrder(o){
+  if(!o) return o;
+  o.invites=Array.isArray(o.invites)?o.invites:[];
+  o.invites.forEach(p=>{
+    if(!p.id) p.id="p"+rnd(6);
+    if(!p.token) p.token=rnd(12);
+    if(!p.status) p.status=p.sent?"sent":"draft";   // draft | sent | joined | contrib | removed
+    if(typeof p.items!=="number") p.items=0;
+  });
+  if(!o.inviteToken) o.inviteToken=rnd(12);
+  o.access=Object.assign({collect:true,invite:true,public:false},o.access||{});
+  o.stage=o.stage||"collect";                        // collect | book-closed
+  o.log=Array.isArray(o.log)?o.log:[];
+  o.hits=Array.isArray(o.hits)?o.hits:[];
+  if(typeof o.extraDays!=="number") o.extraDays=0;
+  if(typeof o.edition!=="number") o.edition=1;
+  return o;
+}
 function loadOrder(id){
-  try{ return JSON.parse(localStorage.getItem(orderKey(id))||"null"); }catch(_){ return null; }
+  try{ return migrateOrder(JSON.parse(localStorage.getItem(orderKey(id))||"null")); }catch(_){ return null; }
 }
 function saveOrder(o){
+  if(!o) return;
   try{ localStorage.setItem(orderKey(o.id),JSON.stringify(o)); }catch(_){}
+  indexTokens(o);
+}
+function indexTokens(o){
+  if(o.revoked){ tokenDrop(o.inviteToken); o.invites.forEach(p=>tokenDrop(p.token)); return; }
+  tokenSet(o.inviteToken,{order:o.id,invite:null});
+  o.invites.forEach(p=>{
+    if(p.status!=="removed") tokenSet(p.token,{order:o.id,invite:p.id}); else tokenDrop(p.token);
+  });
+}
+/* §5.2: всё, что открывает и закрывает доступ, попадает в журнал */
+function logAct(o,act,info){
+  if(!o) return;
+  o.log.push({t:Date.now(),who:state.role==="guest"?(state.guestName||"участник"):"владелец",act:act,info:info||""});
+  if(o.log.length>200) o.log=o.log.slice(-200);
+  saveOrder(o);
+}
+function logLines(o,n){
+  return (o.log||[]).slice(-(n||8)).reverse().map(r=>{
+    const d=new Date(r.t);
+    return '<li><b>'+esc(r.act)+'</b>'+(r.info?' — '+esc(r.info):'')+
+      '<span> · '+r.who+', '+d.toLocaleDateString("ru-RU",{day:"numeric",month:"short"})+
+      ' '+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})+'</span></li>';
+  }).join("")||'<li>Пока пусто</li>';
 }
 function ruDate(v){
   if(!v) return "";
-  const d=new Date(v+"T12:00:00");
+  const d=typeof v==="string"?new Date(v+"T12:00:00"):v;
   return isNaN(d)?"":d.toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
 }
+function plural(n,a,b,c){ const m=n%100, k=n%10;
+  return n+" "+(m>10&&m<20?c:k===1?a:k>1&&k<5?b:c); }
 function deadlineFor(o){
   if(!o||!o.date) return null;
   const ev=new Date(o.date+"T12:00:00");
-  const days=o.deliv==="msk"?7:o.deliv==="ru"?12:10;      // печать и доставка
+  const days=(o.deliv==="msk"?7:o.deliv==="ru"?12:10)-(o.extraDays||0);   // печать и доставка
   const dl=new Date(ev.getTime()-days*864e5);
-  return {date:dl, left:Math.ceil((dl-new Date())/864e5)};
+  return {date:dl, left:Math.ceil((dl-new Date())/864e5), print:days};
 }
-function applyOrder(o){
+/* §5.2: сбор закрывается сам в дедлайн */
+function autoClose(o){
+  const dl=deadlineFor(o);
+  if(!dl||!o.access.collect) return;
+  if(dl.left<0){
+    o.access.collect=false; o.access.invite=false;
+    logAct(o,"сбор закрыт автоматически","дедлайн "+ruDate(dl.date));
+    if(state.role!=="guest") toast("Срок сбора вышел — приём материалов закрыт. Его можно продлить в меню «Доступ».");
+  }
+}
+function joined(o){ return (o.invites||[]).filter(p=>p.status==="joined"||p.status==="contrib").length; }
+function photosIn(o){ return (o.invites||[]).reduce((s,p)=>s+(p.items||0),0)+(state.photos?state.photos.length:0); }
+function baseUrl(){ return location.origin+location.pathname; }
+function ownerUrl(o){ return baseUrl()+"?order="+o.id; }
+function inviteUrl(o,p){ return baseUrl()+"?i="+((p&&p.token)||o.inviteToken); }
+
+function applyOrder(o,role){
   state.order=o; state.paid=o.status==="paid";
+  state.role=role||"owner";
   state.draftId="order:"+o.id;
   state.title=o.title||"Книга историй";
   if(o.occasion&&OCCASIONS[o.occasion]) state.occasion=o.occasion;
@@ -1821,7 +1982,32 @@ function applyOrder(o){
   state.target=start; $("npages").value=start; $("pgLabel").textContent=start;
   $("a-title").value=state.title;
   setBrand(state.title);
+  autoClose(o);
+  applyRole();
   projCard(); orderBar();
+}
+/* §4: что может участник, а что только организатор */
+function applyRole(){
+  const guest=state.role==="guest", o=state.order;
+  const hide=(id,v)=>{ const el=$(id); if(el) el.hidden=!!v; };
+  hide("rebuild",guest); hide("delPage",guest); hide("addPage",guest);
+  hide("print",guest); hide("saveProj",guest);
+  const fmt=$("edFmt"); if(fmt) fmt.disabled=guest;
+  const acc=$("edAccess"); if(acc) acc.hidden=guest||!o;
+  const strip=$("roleStrip");
+  if(strip){
+    if(!guest){ strip.hidden=true; }
+    else{
+      strip.hidden=false;
+      const ro=o&&!o.access.collect;
+      strip.innerHTML='<b>Вы участник книги.</b> '+(ro
+        ? 'Организатор закрыл сбор — книга открыта только для чтения.'
+        : 'Можно добавлять фото и подписи, править свои развороты. Печать, приглашения и состав заказа — у организатора.')+
+        (state.guestName?' <span>Вы вошли как '+esc(state.guestName)+'</span>':'');
+      if(ro){ hide("pickMore",true); }
+    }
+  }
+  const pm=$("pickMore"); if(pm&&pm.parentElement) pm.parentElement.hidden=guest&&o&&!o.access.collect;
 }
 function tierRange(t){
   const r=TIERS.find(x=>x.name===t);
@@ -1830,63 +2016,343 @@ function tierRange(t){
 function projCard(){
   const o=state.order, box=$("projCard");
   if(!o){ box.hidden=true; return; }
-  const dl=deadlineFor(o);
+  const dl=deadlineFor(o), guest=state.role==="guest";
   box.hidden=false;
   box.innerHTML='<div class="row1"><h3>'+esc(o.title||"Книга историй")+'</h3></div>'+
     '<div class="facts">'+
       '<span>'+esc((OCCASIONS[o.occasion]||{}).label||"")+'</span>'+
-      '<span>'+esc(o.tier||"")+' · '+tierRange(o.tier)+'</span>'+
-      (state.paid?'<span class="paid">оплачено</span>':'<span>ожидает оплаты</span>')+
+      (guest?'':'<span>'+esc(o.tier||"")+' · '+tierRange(o.tier)+'</span>')+
+      (guest?'':(state.paid?'<span class="paid">оплачено</span>':'<span>ожидает оплаты</span>'))+
       (o.date?'<span>событие '+ruDate(o.date)+'</span>':'')+
-      (dl?'<span>собрать материалы до '+ruDate(dl.date.toISOString().slice(0,10))+
-          (dl.left>=0?' · осталось '+dl.left+' дн.':' · срок прошёл')+'</span>':'')+
-      (o.people>1?'<span>участников до 20</span>':'')+
+      (dl?'<span>собрать материалы до '+ruDate(dl.date)+
+          (dl.left>=0?' · осталось '+plural(dl.left,"день","дня","дней"):' · срок прошёл')+'</span>':'')+
+      (guest?'':'<span>участников '+joined(o)+' из '+INV_LIMIT+'</span>')+
     '</div>'+
     '<div class="acts"><button class="btn primary" id="projAdd">Добавьте фото</button>'+
-    '<button class="btn" id="projInv">Позовите родных</button></div>';
+    (guest?'':'<button class="btn" id="projInv">Позовите родных</button>')+'</div>';
   $("projAdd").addEventListener("click",()=>$("pickFiles").click());
-  $("projInv").addEventListener("click",()=>show("s-invite"));
+  if($("projInv")) $("projInv").addEventListener("click",()=>{ invRender(); show("s-invite"); });
 }
 function orderBar(){
   const o=state.order, el=$("edOrder");
   if(!el) return;
   if(!o){ el.innerHTML=""; el.hidden=true; return; }
-  const dl=deadlineFor(o);
+  const dl=deadlineFor(o), guest=state.role==="guest";
   el.hidden=false;
-  el.innerHTML='<span><b>'+esc(o.tier||"")+'</b> · '+tierRange(o.tier)+'</span>'+
-    (state.paid?'<span style="color:var(--accent)"><b>оплачено</b></span>':'<span>ожидает оплаты</span>')+
+  el.innerHTML=(guest?'<span>книга собирается вместе</span>'
+                    :'<span><b>'+esc(o.tier||"")+'</b> · '+tierRange(o.tier)+'</span>')+
+    (guest?'':(state.paid?'<span style="color:var(--accent)"><b>оплачено</b></span>':'<span>ожидает оплаты</span>'))+
     (o.date?'<span>событие '+ruDate(o.date)+'</span>':'')+
-    (dl?'<span>сдать до '+ruDate(dl.date.toISOString().slice(0,10))+'</span>':'')+
-    '<button class="btn ghost" id="barInv" style="padding:4px 10px;font-size:12px">Позвать родных</button>';
-  $("barInv").addEventListener("click",()=>show("s-invite"));
+    (dl?'<span'+(dl.left<0?' style="color:var(--danger)"':dl.left<=3?' style="color:var(--accent)"':'')+'>'+
+        (dl.left<0?'срок сбора вышел':'сдать до '+ruDate(dl.date))+'</span>':'')+
+    (o.access.collect?'':'<span style="color:var(--danger)">сбор закрыт</span>')+
+    (guest?'':'<button class="btn ghost" id="barInv" style="padding:4px 10px;font-size:12px">Позвать родных</button>');
+  if($("barInv")) $("barInv").addEventListener("click",()=>{ invRender(); show("s-invite"); });
+  deadlineNote();
+}
+/* §5.2: предупреждение за 3 дня и продление */
+function deadlineNote(){
+  const o=state.order, el=$("dlNote");
+  if(!el) return;
+  const dl=o?deadlineFor(o):null;
+  if(!o||!dl||state.role==="guest"||dl.left>3||!o.access.collect){ el.hidden=true; el.innerHTML=""; return; }
+  el.hidden=false;
+  const add=Math.min(5,dl.print-4);
+  el.innerHTML='<span>До конца сбора '+plural(Math.max(dl.left,0),"день","дня","дней")+
+    '. После этого приём материалов закроется сам, чтобы книга успела в печать.</span>'+
+    (add>0?'<button class="btn ghost" id="dlExtend">Продлить на '+plural(add,"день","дня","дней")+'</button>':
+      '<span><b>Продлить уже нельзя:</b> на печать и доставку остаётся минимум времени.</span>');
+  if(!$("dlExtend")) return;
+  $("dlExtend").addEventListener("click",()=>{
+    o.extraDays=(o.extraDays||0)+add;
+    logAct(o,"сбор продлён","+"+add+" дн., до "+ruDate(deadlineFor(o).date));
+    toast("Сбор продлён до "+ruDate(deadlineFor(o).date));
+    projCard(); orderBar();
+  });
 }
 
-/* ---------- экран приглашений ---------- */
+/* ---------- экран приглашений (§2.4, §4) ---------- */
+const INV_STATUS={draft:"приглашение не отправлено",sent:"приглашение отправлено",
+  joined:"вошёл, материалов пока нет",contrib:"прислал материалы",removed:"убран"};
 function invites(){ return (state.order&&state.order.invites)||[]; }
 function invRender(){
   const o=state.order; if(!o) return;
-  const list=invites(), box=$("inviteList");
-  $("inviteCount").textContent=list.length+" из 20";
+  const list=invites().filter(p=>p.status!=="removed"), box=$("inviteList");
+  $("inviteCount").textContent=list.length+" из "+INV_LIMIT;
   box.innerHTML="";
-  list.forEach((p,i)=>{
+  list.forEach(p=>{
     const r=document.createElement("div"); r.className="inv-row";
-    r.innerHTML='<span>'+esc(p.name)+'</span><span>'+esc(p.contact)+'</span><button type="button" title="Убрать">✕</button>';
-    r.querySelector("button").addEventListener("click",()=>{
-      o.invites.splice(i,1); saveOrder(o); invRender();
+    const st=p.status==="contrib"?"прислал "+plural(p.items||0,"фото","фото","фото"):INV_STATUS[p.status]||"";
+    r.innerHTML='<span>'+esc(p.name)+'<em>'+esc(st)+'</em></span><span>'+esc(p.contact||"—")+'</span>'+
+      '<span class="btns"><button type="button" data-a="link" title="Скопировать личную ссылку">ссылка</button>'+
+      '<button type="button" data-a="del" title="Убрать участника вместе с материалами">✕</button></span>';
+    r.querySelector('[data-a="link"]').addEventListener("click",async()=>{
+      const u=inviteUrl(o,p);
+      try{ await navigator.clipboard.writeText(u); toast("Личная ссылка для "+p.name+" скопирована"); }
+      catch(_){ prompt("Личная ссылка для "+p.name,u); }
+    });
+    r.querySelector('[data-a="del"]').addEventListener("click",()=>{
+      confirmBox({title:"Убрать "+p.name+"?",
+        text:"Участник потеряет доступ по своей ссылке. Его фото и подписи ("+(p.items||0)+") уйдут из книги вместе с ним. Действие попадёт в журнал доступа.",
+        ok:"Убрать", danger:true, go:()=>{
+          p.status="removed"; tokenDrop(p.token);
+          logAct(o,"участник убран",p.name+(p.items?", материалов: "+p.items:""));
+          invRender(); projCard();
+          toast(p.name+" больше не участник книги");
+        }});
     });
     box.appendChild(r);
   });
-  const link=location.origin+location.pathname+"?order="+o.id;
-  $("invText").value="Собираем книгу к событию: "+(o.title||"наша книга")+".\n"+
-    "Добавь свои фото и пару слов — займёт пять минут:\n"+link;
+  const link=inviteUrl(o,null);
+  $("invLinkNote").innerHTML=o.access.invite
+    ? 'Общая ссылка: <code>'+esc(link)+'</code>'
+    : '<b>Общая ссылка отключена.</b> Включить можно в меню «Доступ» в редакторе.';
+  $("invText").value="Собираем книгу: "+(o.title||"наша книга")+
+    (o.date?" — к "+ruDate(o.date):"")+".\n"+
+    "Добавьте свои фото и пару слов, это пять минут:\n"+link+
+    "\nРегистрация не нужна, материалы видят только участники книги.";
 }
 function invAdd(name,contact){
   const o=state.order; if(!o) return;
   o.invites=o.invites||[];
-  if(o.invites.length>=20){ toast("В тариф входит до 20 участников"); return; }
+  if(invites().filter(p=>p.status!=="removed").length>=INV_LIMIT){
+    toast("В тариф входит до "+INV_LIMIT+" участников"); return;
+  }
   if(!name.trim()) return;
-  o.invites.push({name:name.trim(),contact:contact.trim(),sent:false});
+  o.invites.push({id:"p"+rnd(6),token:rnd(12),name:name.trim(),contact:contact.trim(),status:"draft",items:0});
   saveOrder(o); invRender();
+}
+
+/* ---------- вход по приглашению (§3) ---------- */
+function guestKey(id){ return "vm:guest:"+id; }
+function guestWho(id){ try{ return JSON.parse(localStorage.getItem(guestKey(id))||"null"); }catch(_){ return null; } }
+function guestSet(id,v){ try{ localStorage.setItem(guestKey(id),JSON.stringify(v)); }catch(_){} }
+/* §4: всплеск входов по общей ссылке замораживает приём */
+function burst(o){
+  const now=Date.now();
+  o.hits=(o.hits||[]).filter(t=>now-t<BURST_MS); o.hits.push(now);
+  if(o.hits.length>BURST_N){
+    o.access.invite=false; o.frozen=true;
+    logAct(o,"общая ссылка заморожена","входов за 10 минут: "+o.hits.length);
+    return true;
+  }
+  saveOrder(o); return false;
+}
+function guestOpen(token){
+  const rec=tokenFind(token);
+  if(!rec){ window.__inviteMissing=true; return false; }
+  const o=loadOrder(rec.order);
+  if(!o){ window.__inviteMissing=true; return false; }
+  const pers=rec.invite?o.invites.find(p=>p.id===rec.invite):null;
+  const me=guestWho(o.id);
+  const known=!!(me||(pers&&(pers.status==="joined"||pers.status==="contrib")));
+  if(o.revoked){ window.__inviteClosed="Организатор закрыл доступ к книге."; return false; }
+  if(pers&&pers.status==="removed"){ window.__inviteClosed="Организатор убрал вас из участников книги."; return false; }
+  if(!o.access.invite&&!known){
+    window.__inviteClosed=o.frozen
+      ? "Ссылку открыло слишком много людей за короткое время, приём по общей ссылке заморожен. Напишите организатору."
+      : "Ссылку-приглашение отозвали. Попросите организатора прислать новую.";
+    return false;
+  }
+  if(!o.access.collect&&!known){
+    window.__inviteClosed="Сбор материалов закрыт — книга уже готовится к печати.";
+    return false;
+  }
+  if(!pers&&o.access.collect){
+    if(joined(o)>=INV_LIMIT){ window.__inviteClosed="Мест больше нет: в книгу входит до "+INV_LIMIT+" участников. Напишите организатору."; return false; }
+    if(burst(o)){ window.__inviteClosed="Ссылку открыло слишком много людей за короткое время, приём по общей ссылке заморожен. Напишите организатору."; return false; }
+  }
+  state.guest=pers||null; state.guestName=(me&&me.name)||(pers&&pers.name)||"";
+  applyOrder(o,"guest");
+  if(pers&&(pers.status==="draft"||pers.status==="sent")){
+    pers.status="joined";
+    logAct(o,"участник открыл приглашение",pers.name);
+  }
+  saveOrder(o);
+  guestPaint();
+  return true;
+}
+function guestPaint(){
+  const o=state.order; if(!o) return;
+  const dl=deadlineFor(o), ev=o.date?Math.ceil((new Date(o.date+"T12:00:00")-new Date())/864e5):null;
+  const who=(o.owner&&(o.owner.name||o.owner.contact))||"Организатор";
+  const occ=(OCCASIONS[o.occasion]||{}).label||"";
+  $("gvWho").innerHTML=esc(who)+' собирает книгу'+(occ?' — '+esc(occ.toLowerCase()):'')+
+    (o.date?', к '+esc(ruDate(o.date)):'');
+  $("gvStats").innerHTML=
+    '<span><b>'+joined(o)+'</b> уже участвуют</span>'+
+    '<span><b>'+photosIn(o)+'</b> фото собрано</span>'+
+    (ev!==null?'<span><b>'+Math.max(ev,0)+'</b> дн. до праздника</span>':'')+
+    (dl?'<span>материалы принимаем до <b>'+ruDate(dl.date)+'</b></span>':'');
+  $("gvTitle").textContent=o.title||"Книга историй";
+  const open=o.access.collect;
+  $("gvAdd").hidden=!open;
+  $("gvLook").textContent=open?"Сначала посмотрю":"Посмотреть книгу";
+  $("gvClosed").hidden=open;
+  $("gvName").value=(guestWho(o.id)||{}).name||(state.guest&&state.guest.name)||"";
+}
+
+/* ---------- кто вы: спрашиваем один раз, при первом сохранении (§3.2) ---------- */
+function askGuest(){
+  const o=state.order;
+  return new Promise(res=>{
+    if(state.role!=="guest"||!o) return res(true);
+    const me=guestWho(o.id);
+    if(me&&me.name) return res(true);
+    const el=document.createElement("div"); el.className="modal";
+    el.innerHTML='<div class="box"><h3>Как вас подписать в книге?</h3>'+
+      '<div class="f"><label for="gName">Имя</label><input id="gName" type="text" placeholder="Например, Марина"></div>'+
+      '<div class="f"><label for="gContact">Телефон или почта</label><input id="gContact" type="text" placeholder="чтобы вернуться к своим материалам"></div>'+
+      '<p class="note">Организатор увидит, что материалы прислали вы. Контакт нужен, чтобы вы смогли вернуться к своей части книги и получить напоминание.</p>'+
+      '<div class="foot" style="margin-top:16px"><span class="note">Спрашиваем один раз</span>'+
+      '<button class="btn primary" id="gOk">Продолжить</button></div></div>';
+    document.body.appendChild(el);
+    const done=()=>{
+      const name=($("gName").value||"").trim()||"Участник";
+      const contact=($("gContact").value||"").trim();
+      guestSet(o.id,{name:name,contact:contact,at:Date.now()});
+      state.guestName=name;
+      let p=state.guest;
+      if(!p){
+        p={id:"p"+rnd(6),token:rnd(12),name:name,contact:contact,status:"joined",items:0};
+        o.invites.push(p); state.guest=p;
+      }else{ p.name=p.name||name; p.contact=p.contact||contact; p.status="joined"; }
+      logAct(o,"участник вошёл",name);
+      applyRole(); el.remove(); res(true);
+    };
+    $("gOk").addEventListener("click",done);
+    $("gName").addEventListener("keydown",e=>{ if(e.key==="Enter") done(); });
+    $("gName").focus();
+  });
+}
+/* сколько материалов прислал участник — видно организатору в списке */
+function guestCount(n){
+  const o=state.order; if(state.role!=="guest"||!o||!state.guest) return;
+  state.guest.items=(state.guest.items||0)+n;
+  state.guest.status="contrib";
+  logAct(o,"участник добавил материалы",state.guestName+": "+n);
+}
+
+/* ---------- управление доступом (§5) ---------- */
+function confirmBox(op){
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>'+esc(op.title)+'</h3><p class="note" style="font-size:14px">'+op.text+'</p>'+
+    '<div class="foot" style="margin-top:18px"><button class="btn ghost" id="cbNo">Отмена</button>'+
+    '<button class="btn '+(op.danger?"danger":"primary")+'" id="cbYes">'+esc(op.ok||"Продолжить")+'</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("cbNo").addEventListener("click",kill);
+  $("cbYes").addEventListener("click",()=>{ kill(); op.go(); });
+}
+function accessDialog(){
+  const o=state.order; if(!o||state.role==="guest") return;
+  const el=document.createElement("div"); el.className="modal";
+  const list=invites().filter(p=>p.status!=="removed");
+  const dl=deadlineFor(o);
+  el.innerHTML='<div class="box"><h3>Доступ к книге</h3>'+
+    '<div class="sw">'+
+      '<label><input type="checkbox" id="swCollect"'+(o.access.collect?" checked":"")+'>'+
+        '<span><b>Приём материалов</b><em>участники добавляют фото и правят свои развороты</em></span></label>'+
+      '<label><input type="checkbox" id="swInvite"'+(o.access.invite?" checked":"")+'>'+
+        '<span><b>Ссылка-приглашение</b><em>по ней входят новые участники; отзывается в один клик</em></span></label>'+
+      '<label><input type="checkbox" id="swPublic"'+(o.access.public?" checked":"")+'>'+
+        '<span><b>Публичная ссылка</b><em>книгу можно показать без входа, только для чтения</em></span></label>'+
+    '</div>'+
+    '<div class="f"><label>Участники — '+list.length+' из '+INV_LIMIT+'</label>'+
+      '<div class="acc-list">'+(list.length?list.map(p=>'<div class="acc-row"><span>'+esc(p.name)+
+        '<em>'+esc(p.status==="contrib"?"прислал "+p.items:(INV_STATUS[p.status]||""))+'</em></span>'+
+        '<button type="button" data-rm="'+p.id+'">убрать</button></div>').join("")
+        :'<p class="note">Пока никого. Пригласите родных — это основной смысл книги.</p>')+'</div></div>'+
+    '<div class="f"><label>Закрытия</label><div class="acc-acts">'+
+      (o.access.collect
+        ?'<button class="btn" id="acClose1">Закрыть сбор</button>'
+        :'<button class="btn" id="acOpen1">Открыть сбор снова</button>')+
+      (o.stage==="book-closed"
+        ?'<button class="btn" id="acEdition">Начать новую редакцию</button>'
+        :'<button class="btn" id="acClose2">Закрыть книгу для печати</button>')+
+      '<button class="btn" id="acClose3">Закрыть доступ всем</button>'+
+      '<button class="btn danger" id="acClose4">Удалить проект</button>'+
+    '</div><p class="note">Закрыть сбор и закрыть доступ — обратимо. Закрыть книгу фиксирует редакцию '+
+    (o.edition||1)+' для печати: новые материалы пойдут в следующую. Удаление проекта не отменяется.</p></div>'+
+    (dl?'<p class="note">Сбор закроется сам '+ruDate(dl.date)+
+      (dl.left>=0?', это через '+plural(dl.left,"день","дня","дней"):' — срок уже прошёл')+'.</p>':'')+
+    '<div class="f"><label>Журнал</label><ul class="acc-log">'+logLines(o,8)+'</ul></div>'+
+    '<div class="foot" style="margin-top:18px"><span class="note">Изменения сохраняются сразу</span>'+
+    '<button class="btn primary" id="acDone">Готово</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  const redraw=()=>{ kill(); projCard(); orderBar(); accessDialog(); };
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("acDone").addEventListener("click",()=>{ kill(); projCard(); orderBar(); });
+  $("swCollect").addEventListener("change",e=>{
+    o.access.collect=e.target.checked;
+    logAct(o,o.access.collect?"приём материалов включён":"приём материалов выключен");
+    redraw();
+  });
+  $("swInvite").addEventListener("change",e=>{
+    o.access.invite=e.target.checked;
+    logAct(o,o.access.invite?"ссылка-приглашение включена":"ссылка-приглашение отозвана");
+    if(o.access.invite){ tokenDrop(o.inviteToken); o.inviteToken=rnd(12); o.revoked=false; o.frozen=false; }
+    saveOrder(o); redraw();
+  });
+  $("swPublic").addEventListener("change",e=>{
+    o.access.public=e.target.checked;
+    logAct(o,o.access.public?"публичная ссылка включена":"публичная ссылка выключена");
+    saveOrder(o);
+  });
+  el.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click",()=>{
+    const p=o.invites.find(x=>x.id===b.dataset.rm); if(!p) return;
+    confirmBox({title:"Убрать "+p.name+"?",
+      text:"Доступ по его ссылке перестанет работать, материалы ("+(p.items||0)+") уйдут из книги. Действие попадёт в журнал.",
+      ok:"Убрать",danger:true,go:()=>{ p.status="removed"; tokenDrop(p.token);
+        logAct(o,"участник убран",p.name); redraw(); }});
+  }));
+  if($("acClose1")) $("acClose1").addEventListener("click",()=>{
+    confirmBox({title:"Закрыть сбор материалов?",
+      text:plural(list.length,"участник","участника","участников")+" больше не смогут добавлять и править — книга останется им видна только для чтения. Ссылка-приглашение перестанет работать. Сбор можно открыть снова.",
+      ok:"Закрыть сбор",go:()=>{ o.access.collect=false; o.access.invite=false;
+        logAct(o,"сбор закрыт","участников: "+list.length); redraw();
+        toast("Сбор закрыт. Участникам ушло уведомление: «Организатор закрыл сбор, спасибо за фото»"); }});
+  });
+  if($("acOpen1")) $("acOpen1").addEventListener("click",()=>{
+    o.access.collect=true; o.access.invite=true; o.revoked=false; o.frozen=false;
+    tokenDrop(o.inviteToken); o.inviteToken=rnd(12);
+    logAct(o,"сбор открыт снова"); redraw(); toast("Сбор открыт, ссылка-приглашение обновлена");
+  });
+  if($("acClose2")) $("acClose2").addEventListener("click",()=>{
+    confirmBox({title:"Закрыть книгу для печати?",
+      text:"Редакция "+(o.edition||1)+" фиксируется: то, что собрано сейчас, уходит в печать. Новые материалы попадут только в следующую редакцию. Отменить нельзя, но новую редакцию начать можно.",
+      ok:"Закрыть книгу",go:()=>{ o.stage="book-closed"; o.access.collect=false; o.access.invite=false;
+        o.closedAt=Date.now(); logAct(o,"книга закрыта для печати","редакция "+(o.edition||1));
+        redraw(); toast("Книга закрыта. Редакция "+(o.edition||1)+" готова к печати"); }});
+  });
+  if($("acEdition")) $("acEdition").addEventListener("click",()=>{
+    o.edition=(o.edition||1)+1; o.stage="collect"; o.access.collect=true; o.access.invite=true; o.revoked=false;
+    tokenDrop(o.inviteToken); o.inviteToken=rnd(12);
+    logAct(o,"начата новая редакция","редакция "+o.edition); redraw();
+  });
+  if($("acClose3")) $("acClose3").addEventListener("click",()=>{
+    confirmBox({title:"Закрыть доступ всем?",
+      text:"Отзываются и приглашения, и публичная ссылка: книга остаётся только у вас. "+
+        plural(list.length,"участник","участника","участников")+" увидят «организатор закрыл доступ». Доступ можно вернуть.",
+      ok:"Закрыть доступ",go:()=>{
+        o.access.invite=false; o.access.public=false; o.access.collect=false; o.revoked=true;
+        o.invites.forEach(p=>tokenDrop(p.token)); tokenDrop(o.inviteToken);
+        logAct(o,"доступ закрыт всем"); redraw(); }});
+  });
+  if($("acClose4")) $("acClose4").addEventListener("click",()=>{
+    confirmBox({title:"Удалить проект?",
+      text:"Книга, собранные материалы и список участников удаляются безвозвратно. "+
+        plural(list.length,"участник","участника","участников")+" потеряют доступ. Это действие не отменяется.",
+      ok:"Удалить навсегда",danger:true,go:()=>{
+        o.invites.forEach(p=>tokenDrop(p.token)); tokenDrop(o.inviteToken);
+        try{ localStorage.removeItem(orderKey(o.id)); }catch(_){}
+        draftsWrite(drafts().filter(x=>x.id!=="order:"+o.id));
+        kill(); state.order=null; state.draftId=null;
+        toast("Проект удалён"); albumsRender(); show("s-albums");
+      }});
+  });
 }
 
 /* =============================== аккаунт, настройки, тариф */
@@ -1998,8 +2464,10 @@ mtab("edit");
 
 $("acctBtn").addEventListener("click",()=>acctDialog("profile"));
 $("acctBtn2").addEventListener("click",()=>acctDialog("profile"));
-$("logoHome").addEventListener("click",()=>show("s-albums"));
-$("logoHome2").addEventListener("click",()=>show("s-albums"));
+function goHome(){ show(state.role==="guest"?"s-guest":"s-albums"); }
+$("logoHome").addEventListener("click",goHome);
+$("logoHome2").addEventListener("click",goHome);
+$("edAccess").addEventListener("click",accessDialog);
 
 /* =============================== режим просмотра (книга) */
 let reader=null;
@@ -2201,7 +2669,10 @@ async function exportPdf(){
     else toast("Не удалось собрать PDF"+(err&&err.message?": "+err.message:""));
   }
 }
-$("print").addEventListener("click",exportPdf);
+$("print").addEventListener("click",()=>{
+  if(state.role==="guest"){ toast("Отправить книгу в печать может только организатор"); return; }
+  exportPdf();
+});
 
 /* =============================== project files */
 function projectJson(){
@@ -2386,25 +2857,42 @@ $("invName").addEventListener("paste",e=>{
 $("invSend").addEventListener("click",async()=>{
   const o=state.order; if(!o) return;
   if(!invites().length){ toast("Добавьте хотя бы одного участника"); return; }
-  o.invites.forEach(p=>p.sent=true); saveOrder(o);
+  o.invites.forEach(p=>{ p.sent=true; if(p.status==="draft") p.status="sent"; });
+  logAct(o,"приглашения отправлены","участников: "+invites().filter(p=>p.status!=="removed").length);
   let copied=false;
   try{ await navigator.clipboard.writeText($("invText").value); copied=true; }catch(_){}
   $("invCopied").textContent=copied
     ? "Текст с ссылкой скопирован — вставьте его в семейный чат. В MVP приглашения не рассылаются автоматически."
     : "Скопируйте текст выше и отправьте в семейный чат. В MVP приглашения не рассылаются автоматически.";
-  toast("Участники сохранены: "+invites().length);
+  toast("Участники сохранены: "+invites().filter(p=>p.status!=="removed").length);
+  invRender();
   setTimeout(()=>show("s-upload"),900);
 });
 $("invSkip").addEventListener("click",()=>show("s-upload"));
 
-/* вход по заказу: app.html?order=<id> */
+/* §3: вход по приглашению — app.html?i=<токен>; владелец входит по app.html?order=<id> */
+$("gvAdd").addEventListener("click",async()=>{ await askGuest(); show("s-upload"); setTimeout(()=>$("pickFiles").click(),200); });
+$("gvLook").addEventListener("click",()=>{
+  const o=state.order; if(!o) return;
+  const d=drafts().find(x=>x.id==="order:"+o.id);
+  if(d){ openDraft(d.id); return; }
+  if(!o.access.collect){ toast("Готовая книга у организатора — он пришлёт ссылку на просмотр"); return; }
+  toast("Книга ещё собирается — развороты появятся, когда организатор соберёт первые страницы");
+  show("s-upload");
+});
 (function(){
   const q=new URLSearchParams(location.search);
+  const tok=q.get("i");
+  if(tok){
+    if(guestOpen(tok)) window.__orderStart="s-guest";
+    else window.__orderMissing=true;
+    return;
+  }
   const id=q.get("order");
   if(!id) return;
   const o=loadOrder(id);
   if(!o){ window.__orderMissing=true; return; }
-  applyOrder(o);
+  applyOrder(o,"owner");
   window.__orderStart = q.get("invite")==="1" ? "s-invite" : "s-upload";
   if(window.__orderStart==="s-invite") invRender();
 })();
@@ -2421,6 +2909,17 @@ $("invSkip").addEventListener("click",()=>show("s-upload"));
 })();
 acctPaint();
 upCounts();
+if(window.__orderMissing){
+  if(window.__inviteClosed){
+    $("orderH").textContent="Ссылка больше не работает";
+    $("orderMsg").textContent=window.__inviteClosed;
+  }else if(window.__inviteMissing){
+    $("orderH").textContent="Не нашли эту книгу";
+    $("orderMsg").textContent="В демоверсии книга живёт в браузере организатора, поэтому чужая ссылка "+
+      "на другом устройстве не откроется. Попросите организатора открыть ссылку на своём компьютере "+
+      "или дождитесь версии с сервером.";
+  }
+}
 show(window.__orderMissing ? "s-order" : (window.__orderStart || "s-landing"));
 })();
 </script>

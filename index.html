@@ -427,6 +427,7 @@ function syncEx(){}
 function makeOrder(){
   const c=calc(), t=TAR[state.pick];
   const id="o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const tok=(Math.random().toString(36)+Math.random().toString(36)).replace(/0\./g,"").slice(0,12);
   const occMap={mom:"jubilee",wedding:"wedding",work:"other",grad:"family",other:"other"};
   const o={
     id:id, createdAt:Date.now(), status:"paid",           // в MVP оплата — заглушка
@@ -438,9 +439,15 @@ function makeOrder(){
     tier:t.n, tierPrice:t.p,
     options:{copies:state.copies, qr:state.qr, cover:!!state.cover, box:!!state.box, urgent:state.urgent, credit:state.credit},
     totals:{base:c.base, copies:c.copies, urgent:c.urgent, qr:c.qr, cover:c.cover, box:c.box, credit:c.credit, total:c.total},
-    owner:state.lead||null, invites:[]
+    owner:state.lead?{name:state.lead.n,contact:state.lead.c}:null,
+    invites:[], inviteToken:tok,
+    access:{collect:true, invite:true, public:false},
+    stage:"collect", edition:1, extraDays:0, log:[{t:Date.now(),who:"владелец",act:"заказ создан",info:t.n}]
   };
   try{ localStorage.setItem("vm:order:"+id, JSON.stringify(o)); }catch(_){}
+  try{ const m=JSON.parse(localStorage.getItem("vm:tokens")||"{}")||{};
+       m[tok]={order:id,invite:null};
+       localStorage.setItem("vm:tokens",JSON.stringify(m)); }catch(_){}
   return o;
 }
 function renderDone(box){
@@ -454,14 +461,17 @@ function renderDone(box){
     return;
   }
   if(!state.order) state.order=makeOrder();
-  const o=state.order, link="app.html?order="+o.id;
+  const o=state.order, link="app.html?order="+o.id, ilink="app.html?i="+o.inviteToken;
   box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p>'+
     '<p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+
     '. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p>'+
-    '<div class="warn"><b>Следующий шаг:</b> позовите родных — имя и телефон каждого, — и отправьте приглашение в семейный чат. Можно и пропустить: соберёте книгу сами.</div>'+
+    '<div class="warn"><b>Следующий шаг:</b> позовите родных — имя и телефон каждого, — и отправьте приглашение в семейный чат. '+
+      'Можно и пропустить: соберёте книгу сами. <a class="btn" href="'+link+'&invite=1" '+
+      'style="margin-top:10px;padding:8px 14px;font-size:14px">Позвать родных</a></div>'+
     '<div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button>'+
-    '<a class="btn" href="'+link+'&invite=1">Позвать родных</a></div>'+
-    '<p class="free">Или сразу <a href="'+link+'">откройте редактор</a> и добавьте фото.</p>';
+    '<a class="btn" href="'+link+'">Открыть редактор</a></div>'+
+    '<p class="free">Ссылка проекта — только ваша: <code>'+link+'</code>. Родным уходит другая, '+
+      'по ней они добавляют материалы, но не могут менять заказ и печать: <code>'+ilink+'</code>.</p>';
   $("#restart").onclick=()=>{Object.assign(state,{i:0,pick:null,copies:0,qr:false,cover:0,box:0,urgent:false,credit:false,done:false,lead:null,order:null,urgentAuto:undefined});saveQuiz();render();};
 }
 render();
