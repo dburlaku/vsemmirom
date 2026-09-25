@@ -109,6 +109,15 @@ h1,h2,h3{text-wrap:balance}
 .acc-acts{display:flex;gap:8px;flex-wrap:wrap}
 .acc-log{margin:0;padding-left:18px;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
 .acc-log b{color:var(--ink);font-weight:600}
+/* выбор обложки */
+.cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+@media (max-width:560px){.cv-grid{grid-template-columns:repeat(2,1fr)}}
+.cv{padding:0;border:2px solid var(--line);background:var(--surface-2);border-radius:var(--r);
+  overflow:hidden;cursor:pointer;display:flex;flex-direction:column;font-family:inherit}
+.cv img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.cv span{font-size:11.5px;color:var(--muted);padding:4px 6px}
+.cv.on{border-color:var(--accent)}
+.cv.on span{color:var(--accent)}
 /* экран приглашённого */
 .guest{max-width:760px;margin:0 auto;padding:clamp(20px,4vw,44px) 16px}
 .guest .lead{font-family:var(--display);font-size:clamp(24px,4.2vw,34px);line-height:1.15;margin:0 0 10px;color:var(--ink)}
@@ -563,6 +572,7 @@ h1,h2,h3{text-wrap:balance}
         <div class="vol" id="volHint" hidden></div>
         <div class="up-grid" id="upGrid"></div>
         <p class="note" id="upSkip"></p>
+        <p class="note" id="upHeic" hidden></p>
       </div>
       <div class="f" style="margin-top:20px">
         <label>Главный герой — необязательно</label>
@@ -648,6 +658,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="role-strip" id="roleStrip" hidden></div>
   <div class="dl-note" id="dlNote" hidden></div>
   <div class="ov-note" id="ovNote" hidden></div>
+  <div class="ov-note" id="cvNote" hidden></div>
   <div class="mtabs" id="mtabs">
     <button class="tab" data-m="pages">Страницы</button>
     <button class="tab on" data-m="edit">Правка</button>
@@ -990,7 +1001,7 @@ setTimeout(()=>{ [...$("styles").children].forEach(b=>{ try{ stylePreview(b.quer
 let intakeBusy=false, skippedHeic=0, skippedBad=0, photoSeq=0;
 function upSkipText(){
   const bits=[];
-  if(skippedHeic) bits.push("HEIC пропущено: "+skippedHeic+" — браузер такие файлы не открывает");
+  if(skippedHeic) bits.push("HEIC пропущено: "+skippedHeic);
   if(skippedBad) bits.push("не удалось прочитать: "+skippedBad);
   $("upSkip").textContent=bits.join(" · ");
 }
@@ -1070,60 +1081,186 @@ function upCounts(){
   const n=state.photos.length;
   $("upCount").textContent=n;
   $("upOf").textContent=n?(n===1?"снимок готов":n<5?"снимка готово":"снимков готово"):"снимков";
-  $("go-scan").disabled=intakeBusy||!n;
-  $("go-scan").textContent=intakeBusy?"Читаю файлы…":"Собрать альбом";
+  const heicPhase=intakeBusy&&heicLeft>0&&n>=8;
+  $("go-scan").disabled=(intakeBusy&&!heicPhase)||!n;
+  $("go-scan").textContent=heicPhase?("Собрать из готовых ("+n+")")
+    :intakeBusy?"Читаю файлы…":"Собрать альбом";
   $("dropCount").textContent=n?"Можно добавить ещё — новые снимки встанут к уже прочитанным":"Пока ничего не выбрано";
   volumeHint();
 }
+/* =============================== HEIC (Приложение Б ред. 2, §6)
+   Библиотека лежит рядом с приложением: внешние CDN запрещены (§8.1 ТЗ).
+   Декодирование идёт очередью в фоновых потоках, книга собирается по мере готовности. */
+const heic = {ready:false, fail:"", pool:[], busy:0, cache:new Map()};
+
+function heicUrl(){ return new URL(LIB_BASE()+"heic-next.js", location.href).href; }
+function LIB_BASE(){ try{ return FACE_LOCAL; }catch(_){ return "vendor/"; } }
+async function heicProbe(){
+  if(heic.ready||heic.fail) return heic.ready;
+  try{
+    const r=await fetch(heicUrl(),{method:"HEAD"});
+    if(!r.ok) throw new Error("нет файла");
+    heic.ready=true;
+  }catch(_){ heic.fail="Библиотека HEIC не найдена рядом с приложением"; }
+  return heic.ready;
+}
+function heicWorker(){
+  // модульная сборка библиотеки работает в фоновом потоке (в обычной есть обращения к document)
+  const src = `
+    import { heicTo } from ${JSON.stringify(heicUrl())};
+    self.onmessage = async (e)=>{
+      const {id, buf, name, maxSide, quality} = e.data;
+      try{
+        const blob = new Blob([buf]);
+        const jpg = await heicTo({blob, type:"image/jpeg", quality: quality||0.92});
+        let out = jpg;
+        // уменьшаем до рабочего размера прямо в потоке, чтобы не грузить главный
+        if(maxSide && self.createImageBitmap && self.OffscreenCanvas){
+          const bmp = await createImageBitmap(jpg);
+          const k = Math.min(1, maxSide/Math.max(bmp.width,bmp.height));
+          if(k<1){
+            const cv = new OffscreenCanvas(Math.round(bmp.width*k), Math.round(bmp.height*k));
+            cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+            out = await cv.convertToBlob({type:"image/jpeg", quality:0.92});
+          }
+          if(bmp.close) bmp.close();
+        }
+        self.postMessage({id, name, ok:true, blob:out});
+      }catch(err){ self.postMessage({id, name, ok:false, error:String(err&&err.message||err)}); }
+    };`;
+  const w=new Worker(URL.createObjectURL(new Blob([src],{type:"text/javascript"})),{type:"module"});
+  w.jobs=new Map();
+  w.onmessage=e=>{ const j=w.jobs.get(e.data.id); if(j){ w.jobs.delete(e.data.id); j(e.data); } };
+  return w;
+}
+function heicPool(){
+  if(heic.pool.length) return heic.pool;
+  const n=Math.max(1,Math.min(4,(navigator.hardwareConcurrency||2)-1));
+  for(let i=0;i<n;i++){ try{ heic.pool.push(heicWorker()); }catch(_){ break; } }
+  if(!heic.pool.length) heic.fail="Фоновые потоки недоступны";
+  return heic.pool;
+}
+let heicSeq=0;
+/* один кадр: отдаём JPEG-блоб. maxSide=0 — полный размер для печати */
+function heicDecode(file, maxSide){
+  return new Promise(async (res,rej)=>{
+    const pool=heicPool();
+    if(!pool.length) return rej(new Error(heic.fail||"нет потоков"));
+    const w=pool[(heicSeq)%pool.length], id=++heicSeq;
+    let buf;
+    try{ buf=await file.arrayBuffer(); }catch(e){ return rej(e); }
+    const t=setTimeout(()=>{ w.jobs.delete(id); rej(new Error("таймаут")); }, 60000);
+    w.jobs.set(id,d=>{ clearTimeout(t); d.ok?res(d.blob):rej(new Error(d.error||"не открылся")); });
+    w.postMessage({id, buf, name:file.name, maxSide:maxSide===undefined?2200:maxSide, quality:0.92},[buf]);
+  });
+}
+/* очередь: отдаёт готовые кадры по мере декодирования, с прогрессом */
+async function heicQueue(files, onFrame, onProgress){
+  const ok=await heicProbe();
+  if(!ok){ toast(heic.fail+" — кадры HEIC пропущены"); return 0; }
+  const pool=heicPool();
+  if(!pool.length){ toast(heic.fail+" — кадры HEIC пропущены"); return 0; }
+  let done=0, good=0, next=0;
+  const total=files.length;
+  const run=async()=>{
+    while(next<files.length){
+      const f=files[next++];
+      const key=f.name+"|"+f.size;
+      try{
+        let blob=heic.cache.get(key);
+        if(!blob){ blob=await heicDecode(f, 2200); heic.cache.set(key,blob); }
+        const jpg=new File([blob], f.name.replace(/\.(heic|heif)$/i,".jpg"),
+                           {type:"image/jpeg", lastModified:f.lastModified});
+        jpg.heicSource=f;                       // для печати берём полноразмерный кадр
+        await onFrame(jpg, f);
+        good++;
+      }catch(e){ skippedBad++; upSkipText(); }
+      done++;
+      if(onProgress) onProgress(done,total);
+    }
+  };
+  await Promise.all(pool.map(()=>run()));
+  return good;
+}
+
+let heicLeft=0;
 async function intake(list){
   if(state.role==="guest"){
     if(state.order&&!state.order.access.collect){ toast("Организатор закрыл сбор — материалы уже не принимаются"); return; }
     await askGuest();
   }
-  const files=[...list].filter(f=>/\.(jpe?g|png|webp)$/i.test(f.name));
-  skippedHeic+=[...list].filter(f=>/\.(heic|heif)$/i.test(f.name)).length;
+  const all=[...list];
+  const files=all.filter(f=>/\.(jpe?g|png|webp)$/i.test(f.name));
+  const heics=all.filter(f=>/\.(heic|heif)$/i.test(f.name));
   upSkipText();
-  if(!files.length){
-    if(skippedHeic) toast("В выборе только HEIC — сохраните их в JPEG");
-    else toast("Подходящих изображений не нашлось");
+  if(!files.length&&!heics.length){
+    toast("Подходящих изображений не нашлось");
     $("uploader").hidden=state.photos.length===0;
     return;
   }
   $("uploader").hidden=false;
   intakeBusy=true; upCounts();
   const known=new Set(state.photos.map(p=>p.name+"|"+p.size));
+  const total=files.length+heics.length;
   let done=0;
-  for(const f of files){
-    if(known.has(f.name+"|"+f.size)){ done++; continue; }
-    try{
-      const head=await f.slice(0,262144).arrayBuffer();
-      const date=exifDate(f,head);
-      const cam=exifCamera(head);
-      const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});
-      const a=analyse(bmp);
-      const k=Math.min(1,1100/Math.max(bmp.width,bmp.height));
-      const cv=document.createElement("canvas");
-      cv.width=Math.max(1,Math.round(bmp.width*k)); cv.height=Math.max(1,Math.round(bmp.height*k));
-      cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
-      if(bmp.close) bmp.close();
-      const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.72));
-      const url=URL.createObjectURL(blob);
-      const im=new Image(); im.src=url; await imReady(im);
-      const ph={id:"p"+(photoSeq++),name:f.name,size:f.size,date,file:f,url,thumb:im,
-                score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
-                flat:a.flat,axis:a.axis,sat:a.sat,edgeShare:a.edgeShare,w:a.w,h:a.h,cam:cam,ratio:a.w/a.h,
-                dup:false,weak:false,noHero:false,over:false,ser:false,shot:false,scene:0,why:""};
-      state.photos.push(ph); state.byId.set(ph.id,ph);
-      known.add(f.name+"|"+f.size);
-      upTile(ph);
-    }catch(_){ skippedBad++; upSkipText(); }
+  const step=()=>{
     done++;
-    $("upBar").style.width=Math.round(done/files.length*100)+"%";
-    if(done%3===0){ upCounts(); await new Promise(r=>setTimeout(r,0)); }
+    $("upBar").style.width=Math.round(done/total*100)+"%";
+    if(done%3===0) upCounts();
+  };
+  for(const f of files){
+    if(known.has(f.name+"|"+f.size)){ step(); continue; }
+    await addPhoto(f,known);
+    step();
+    if(done%3===0) await new Promise(r=>setTimeout(r,0));
+  }
+  if(heics.length){
+    // §6: очередь в фоновых потоках, книга собирается по мере готовности
+    heicLeft=heics.length;
+    $("upHeic").hidden=false;
+    $("upHeic").textContent="Открываю HEIC: 0 из "+heics.length;
+    await heicQueue(heics,
+      async jpg=>{ await addPhoto(jpg,known); },
+      (d,t)=>{
+        heicLeft=t-d;
+        $("upHeic").textContent="Открываю HEIC: "+d+" из "+t+
+          (state.photos.length>=8?" · можно собирать из готовых":"");
+        step();
+      });
+    $("upHeic").hidden=true; heicLeft=0;
   }
   intakeBusy=false; upCounts();
   $("upBar").style.width="100%";
-  if(state.role==="guest"&&files.length) guestCount(files.length);
+  if(state.role==="guest"&&(files.length||heics.length)) guestCount(files.length+heics.length);
+}
+/* один кадр: читаем, меряем, кладём в набор */
+async function addPhoto(f,known){
+  try{
+    const head=await f.slice(0,262144).arrayBuffer();
+    const date=exifDate(f,head);
+    const cam=exifCamera(head)||!!f.heicSource;      // HEIC снят камерой телефона
+    const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});
+    const a=analyse(bmp);
+    const k=Math.min(1,1100/Math.max(bmp.width,bmp.height));
+    const cv=document.createElement("canvas");
+    cv.width=Math.max(1,Math.round(bmp.width*k)); cv.height=Math.max(1,Math.round(bmp.height*k));
+    cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+    if(bmp.close) bmp.close();
+    const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.72));
+    const url=URL.createObjectURL(blob);
+    const im=new Image(); im.src=url; await imReady(im);
+    const ph={id:"p"+(photoSeq++),name:f.name,size:f.size,date,file:f,url,thumb:im,
+              heic:f.heicSource||null,
+              score:a.score,hash:a.hash,sharp:a.sharp,mean:a.mean,clip:a.clip,contrast:a.contrast,
+              flat:a.flat,axis:a.axis,sat:a.sat,edgeShare:a.edgeShare,
+              moire:a.moire,frame:a.frame,glare:a.glare,
+              w:a.w,h:a.h,cam:cam,ratio:a.w/a.h,
+              dup:false,weak:false,noHero:false,over:false,ser:false,shot:false,scene:0,why:""};
+    state.photos.push(ph); state.byId.set(ph.id,ph);
+    if(known) known.add(f.name+"|"+f.size);
+    upTile(ph);
+    return ph;
+  }catch(_){ skippedBad++; upSkipText(); return null; }
 }
 /* --- выбор папки: сначала современный File System Access, иначе старый input --- */
 const FS_OK = typeof window.showDirectoryPicker==="function";
@@ -1327,6 +1464,48 @@ function analyse(bmp){
     if(Math.max(r,gg,b)-Math.min(r,gg,b)<12) satLow++;
   }
   const sat=satLow/(n*n);
+  // --- признаки «снято с экрана» (§5 ред. 2): рамка монитора, муар, блик ---
+  const m=128, mc=document.createElement("canvas"); mc.width=m; mc.height=m;
+  const m2=mc.getContext("2d",{willReadFrequently:true}); m2.drawImage(bmp,0,0,m,m);
+  const md=m2.getImageData(0,0,m,m).data, gm=new Float32Array(m*m);
+  let gsum=0;
+  for(let i=0;i<m*m;i++){ const v=0.299*md[i*4]+0.587*md[i*4+1]+0.114*md[i*4+2]; gm[i]=v; gsum+=v; }
+  const gmean=gsum/(m*m);
+  // яркая прямоугольная область в середине и тёмные поля по краям = экран в кадре
+  const rowM=new Float32Array(m), colM=new Float32Array(m);
+  for(let y=0;y<m;y++){ let s1=0; for(let x=0;x<m;x++) s1+=gm[y*m+x]; rowM[y]=s1/m; }
+  for(let x=0;x<m;x++){ let s1=0; for(let y=0;y<m;y++) s1+=gm[y*m+x]; colM[x]=s1/m; }
+  const span=(arr)=>{
+    const lim=gmean+12; let a=-1,b=-1;
+    for(let i=0;i<arr.length;i++){ if(arr[i]>lim){ if(a<0) a=i; b=i; } }
+    return (a<0)?null:{a,b,len:(b-a+1)/arr.length};
+  };
+  const rs=span(rowM), cs=span(colM);
+  let frame=0, glare=0, moire=0;
+  if(rs&&cs&&rs.len>0.3&&rs.len<0.93&&cs.len>0.3&&cs.len<0.93){
+    let inS=0,inN=0,outS=0,outN=0;
+    for(let y=0;y<m;y++) for(let x=0;x<m;x++){
+      const v=gm[y*m+x];
+      if(y>=rs.a&&y<=rs.b&&x>=cs.a&&x<=cs.b){ inS+=v; inN++; } else { outS+=v; outN++; }
+    }
+    const inM=inN?inS/inN:0, outM=outN?outS/outN:0;
+    if(inM-outM>28) frame=Math.min(1,(inM-outM)/90);
+    // блик: небольшое очень яркое пятно внутри экрана
+    let bright=0;
+    for(let y=rs.a;y<=rs.b;y++) for(let x=cs.a;x<=cs.b;x++) if(gm[y*m+x]>243) bright++;
+    const area=Math.max(1,(rs.b-rs.a+1)*(cs.b-cs.a+1));
+    const bs=bright/area; if(bs>0.004&&bs<0.12) glare=1;
+    // муар: частое чередование знака вдоль строк внутри экрана
+    let alt=0, cnt=0;
+    for(let y=rs.a+1;y<rs.b;y+=2){
+      let prev=0;
+      for(let x=cs.a+1;x<cs.b;x++){
+        const d2=gm[y*m+x]-gm[y*m+x-1];
+        if(Math.abs(d2)>3){ if(prev&&Math.sign(d2)!==prev) alt++; prev=Math.sign(d2); cnt++; }
+      }
+    }
+    moire=cnt>60?alt/cnt:0;
+  }
   // dHash 9x8
   const hc=document.createElement("canvas"); hc.width=9; hc.height=8;
   const h2=hc.getContext("2d",{willReadFrequently:true}); h2.drawImage(bmp,0,0,9,8);
@@ -1338,7 +1517,8 @@ function analyse(bmp){
   }
   const score=Math.min(1,sharp/16)*0.52 + Math.min(1,contrast/62)*0.24 + (1-Math.min(1,clip*4))*0.14
             + Math.min(1,(bmp.width*bmp.height)/4e6)*0.10;
-  return {hash:bits, score, sharp, contrast, clip, mean, flat, axis, sat, edgeShare, w:bmp.width, h:bmp.height};
+  return {hash:bits, score, sharp, contrast, clip, mean, flat, axis, sat, edgeShare,
+          frame, glare, moire, w:bmp.width, h:bmp.height};
 }
 function hamming(a,b){ let d=0; for(let i=0;i<64;i++) if(a[i]!==b[i]) d++; return d; }
 
@@ -1569,8 +1749,20 @@ async function runScan(){
     const axis=p.axis||0, sat=p.sat||0, flat=p.flat||0, edge=p.edgeShare||0;
     const uiLike = axis>0.82 && (sat>0.45 || flat>0.2) && !(edge>0.75 && flat<0.05);
     const screenish = screenRatio(p.w,p.h) && axis>0.7 && sat>0.6 && flat>0.1;
-    p.shot = !p.cam && (uiLike || screenish);     // EXIF камеры снимает подозрение
-    if(p.shot) p.why="похоже на скриншот";
+    // Снято с экрана: яркий прямоугольник в тёмной рамке, серые цвета интерфейса и мало
+    // фактуры по кадру. Пороги по замерам: у монитора frame 1.00 / sat 0.79 / edge 0.51,
+    // у живых снимков с похожей рамкой sat не выше 0.71 при frame ниже 0.6.
+    const fromScreen = (p.frame||0)>=0.6 && sat>=0.72 && edge<0.65 && flat>0.1;
+    // Скриншот игры: пропорции экрана телефона, крупные плоские заливки и почти нет фактуры.
+    const gameShot = screenRatio(p.w,p.h) && (flat>0.3 || axis>0.65) && edge<0.3;
+    // документ, чек, QR: очень светлый, почти серый, границы строго по осям
+    const document = p.mean>196 && sat>0.78 && axis>0.6 && flat>0.06;
+    p.shot=false; p.shotKind="";
+    if(!p.cam && (uiLike || screenish || gameShot)){ p.shot=true; p.shotKind="похоже на скриншот"; }
+    else if(fromScreen){ p.shot=true; p.shotKind="снято с экрана"; }
+    else if(document && !p.cam){ p.shot=true; p.shotKind="похоже на документ"; }
+    else if(document && p.cam && sat>0.85 && p.mean>210){ p.shot=true; p.shotKind="похоже на документ"; }
+    if(p.shot) p.why=p.shotKind;
   });
   state.report.shots=photos.filter(p=>p.shot).length;
 
@@ -1765,11 +1957,12 @@ function breakRepeat(kind,hist){
 }
 function assemble(){
   const oc=OCCASIONS[state.occasion];
-  const alive=p=>!p.dup&&!p.weak&&!p.shot&&!p.ser;         // пять категорий отбраковки (§2.1)
+  // пять категорий отбраковки (§2.1); кадры других томов в эту книгу не идут (§7)
+  const alive=p=>!p.dup&&!p.weak&&!p.shot&&!p.ser&&!p.vol;
   let pool=state.photos.filter(p=>alive(p)&&!p.noHero).sort((a,b)=>(a.date||0)-(b.date||0));
   if(pool.length<6) pool=state.photos.filter(alive).sort((a,b)=>(a.date||0)-(b.date||0));
   if(!pool.length){ state.pages=[]; return; }
-  state.photos.forEach(p=>{ p.over=false; });
+  state.photos.forEach(p=>{ if(!p.vol) p.over=false; });
   const target=Math.max(8,state.target);
   const cover=[...pool].sort((a,b)=>b.score-a.score)[0];
   const last=pool[pool.length-1];
@@ -1780,7 +1973,9 @@ function assemble(){
   const sections=years.length>1&&years.length<=6&&target>=24;   // разделы по годам (§3.2)
 
   const pages=[];
-  pages.push({type:"cover",title:state.title||"Альбом",years:state.sub||span,slots:[cover.id],focal:[]});
+  state.coverOk=false;                       // §4.2: подтверждает человек
+  pages.push({type:"cover",title:state.title||"Альбом",years:state.sub||coverCaption()||span,
+              slots:[cover.id],focal:[]});
   pages.push({type:"text",title:"Несколько слов",body:oc.intro,slots:[],focal:[]});
 
   const budget=Math.max(1,target-4);             // обложка, вступление, пожелания, финал
@@ -1829,7 +2024,7 @@ function assemble(){
   }
 
   // кадры, не вошедшие в объём тарифа (§2.1: «не поместилось в книгу»)
-  queue.forEach(p=>{ p.over=true; p.why=p.why||"не поместилось в книгу"; });
+  queue.forEach(p=>{ p.over=true; if(!p.vol) p.why="не поместилось в книгу"; });
   state.overflow=queue.length;
 
   pages.push({type:"text",title:oc.closing,body:oc.wishes,sign:"",slots:[],focal:[]});
@@ -1851,7 +2046,7 @@ function assemble(){
   state.pages=pages; state.cur=0; state.selSlot=-1;
   $("rail").innerHTML="";
   setBrand(state.title);
-  inspector(); trayRender(); updHead(); render(); overflowNote(); saveLocal();
+  inspector(); trayRender(); updHead(); render(); overflowNote(); coverNote(); saveLocal();
 }
 /* §3.3: когда отобранных кадров сильно больше объёма — предлагаем выбор, а не уплотняем вёрстку */
 function overflowNote(){
@@ -1873,13 +2068,7 @@ function overflowNote(){
     el.hidden=true;
     toast("Оставляю лучшие кадры: остальные ждут в лотке, их можно вернуть по одному");
   });
-  $("ovVol").addEventListener("click",()=>{
-    const half=Math.ceil(state.photos.filter(p=>!p.dup&&!p.weak&&!p.shot&&!p.ser).length/2);
-    const rest=state.photos.filter(p=>p.over).slice(0,half);
-    rest.forEach(p=>{ p.vol2=true; p.why="второй том"; });
-    toast("Кадры второго тома помечены в лотке. Соберите их отдельной книгой кнопкой «Создать альбом»");
-    el.hidden=true;
-  });
+  $("ovVol").addEventListener("click",volumesDialog);
 }
 $("go-scan").addEventListener("click",()=>{ runScan().catch(err=>{ crash("сборка",err); show("s-upload"); }); });
 
@@ -1999,6 +2188,237 @@ function inspector(){
   }));
 }
 
+/* =============================== тома (Приложение Б ред. 2, §7)
+   Когда отобранных кадров больше, чем вмещает максимум тарифа, человек выбирает:
+   увеличить объём, оставить лучшие или разделить архив на связанные тома. */
+const VOL_PER_PAGE=3.2;                       // столько кадров в среднем ложится на страницу
+function volPages(n){ return Math.max(24,Math.min(200,Math.ceil(n/VOL_PER_PAGE/2)*2)); }
+function volPool(){
+  return state.photos.filter(p=>!p.dup&&!p.weak&&!p.shot&&!p.ser)
+    .sort((a,b)=>(a.date||0)-(b.date||0));
+}
+function splitVolumes(mode,count){
+  const pool=volPool();
+  if(!pool.length) return [];
+  const out=[];
+  if(mode==="years"){
+    const by=new Map();
+    pool.forEach(p=>{ const y=p.date?new Date(p.date).getUTCFullYear():0;
+      if(!by.has(y)) by.set(y,[]); by.get(y).push(p); });
+    const years=[...by.keys()].sort();
+    // режем года на нужное число томов, стараясь выровнять объём
+    const per=Math.ceil(pool.length/count);
+    let cur=[], curY=[];
+    years.forEach(y=>{
+      const g=by.get(y);
+      if(cur.length && cur.length+g.length>per*1.25 && out.length<count-1){
+        out.push({frames:cur,years:curY.slice()}); cur=[]; curY=[];
+      }
+      cur=cur.concat(g); curY.push(y);
+    });
+    if(cur.length) out.push({frames:cur,years:curY});
+  }else{
+    const per=Math.ceil(pool.length/count);
+    for(let i=0;i<count;i++){
+      const frames=pool.slice(i*per,(i+1)*per);
+      if(!frames.length) continue;
+      const ys=frames.filter(p=>p.date).map(p=>new Date(p.date).getUTCFullYear());
+      out.push({frames,years:ys.length?[Math.min(...ys),Math.max(...ys)]:[]});
+    }
+  }
+  return out.map((v,i)=>{
+    const ys=v.years.filter(Boolean);
+    const label=ys.length?(Math.min(...ys)===Math.max(...ys)?String(Math.min(...ys))
+                          :Math.min(...ys)+"–"+Math.max(...ys)):"без дат";
+    const pages=volPages(v.frames.length);
+    return {n:i+1, frames:v.frames, label, pages, tier:tierFor(pages), photos:v.frames.length};
+  });
+}
+function volumesDialog(){
+  if(state.role==="guest") return;
+  let mode="years", count=2, plan=splitVolumes(mode,count);
+  const el=document.createElement("div"); el.className="modal";
+  const draw=()=>{
+    plan=splitVolumes(mode,count);
+    el.innerHTML='<div class="box"><h3>Разделить на тома</h3>'+
+      '<p class="note" style="font-size:13.5px">Отобрано '+volPool().length+
+      ' кадров — это больше, чем вмещает один том. Ниже предпросмотр: границы можно двигать, '+
+      'меняя способ деления и число томов.</p>'+
+      '<div class="f"><label>Как делим</label><div class="acc-acts">'+
+        '<button class="btn'+(mode==="years"?" primary":"")+'" data-m="years">По годам</button>'+
+        '<button class="btn'+(mode==="even"?" primary":"")+'" data-m="even">Поровну по объёму</button>'+
+        '<button class="btn" data-c="-">− том</button><button class="btn" data-c="+">+ том</button>'+
+      '</div></div>'+
+      '<div class="acc-list">'+plan.map(v=>'<div class="acc-row"><span><b>Том '+v.n+'</b>'+
+        '<em>'+esc(v.label)+' · '+v.pages+' страниц · '+v.photos+' фото · тариф «'+v.tier+'»</em></span>'+
+        '<span>'+fmtRub(tierPrice(v.tier))+'</span></div>').join("")+'</div>'+
+      '<p class="note">Каждый том оплачивается по своему тарифу. Зачёт 990 ₽ за «Альбом» '+
+      'применяется один раз ко всей серии, а не к каждому тому. Оформление, нумерация и список '+
+      'участников у томов общие.</p>'+
+      '<div class="foot" style="margin-top:16px"><button class="btn ghost" id="vlNo">Отмена</button>'+
+      '<button class="btn primary" id="vlOk">Создать '+plan.length+' тома</button></div></div>';
+    el.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click",()=>{ mode=b.dataset.m; draw(); }));
+    el.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click",()=>{
+      count=Math.max(2,Math.min(5,count+(b.dataset.c==="+"?1:-1))); draw(); }));
+    el.querySelector("#vlNo").addEventListener("click",()=>el.remove());
+    el.querySelector("#vlOk").addEventListener("click",()=>{ makeVolumes(plan); el.remove(); });
+  };
+  document.body.appendChild(el);
+  el.addEventListener("click",e=>{ if(e.target===el) draw&&null; });
+  draw();
+}
+function tierPrice(name){
+  return {"Момент":4990,"Глава":6690,"Жизнь":10490,"С редактором":19900}[name]||0;
+}
+function fmtRub(n){ return n?n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽":"—"; }
+/* подтверждение создаёт связанные проекты: первый том остаётся здесь, остальные ждут оплаты */
+function makeVolumes(plan){
+  const o=state.order;
+  const seriesId="s"+rnd(8);
+  const first=plan[0];
+  const rest=plan.slice(1);
+  // кадры других томов уходят из этой книги в лоток с понятной причиной
+  const mine=new Set(first.frames.map(p=>p.id));
+  state.photos.forEach(p=>{ p.vol=0; });
+  rest.forEach(v=>v.frames.forEach(p=>{ p.vol=v.n; p.over=true; p.why="том "+v.n; }));
+  state.target=first.pages; $("npages").value=first.pages; $("pgLabel").textContent=first.pages;
+  const baseTitle=((o&&o.title)||state.title||"Книга историй").replace(/ · том \d+$/,"");
+  state.title=baseTitle+" · том 1";
+  const cov=state.pages.find(x=>x.type==="cover"); if(cov) cov.title=state.title;
+  setBrand(state.title);
+  if(o){
+    o.series={id:seriesId, n:1, of:plan.length};
+    o.tier=first.tier; o.title=state.title; saveOrder(o);
+  }
+  const made=[];
+  rest.forEach(v=>{
+    const id="o"+Date.now().toString(36)+rnd(4);
+    const base=o?JSON.parse(JSON.stringify(o)):{
+      occasion:state.occasion, date:"", deliv:"later", people:1, owner:null,
+      options:{}, totals:{}, invites:[], status:"awaiting"};
+    const vo=Object.assign({},base,{
+      id, createdAt:Date.now(), status:"awaiting",         // §7: свой тариф, оплата отдельно
+      title:baseTitle+" · том "+v.n,
+      tier:v.tier, tierPrice:tierPrice(v.tier),
+      series:{id:seriesId, n:v.n, of:plan.length},
+      invites:(o&&o.invites)?o.invites.map(p=>Object.assign({},p,{token:rnd(12)})):[],
+      inviteToken:rnd(12), access:{collect:true,invite:true,public:false},
+      stage:"collect", edition:1, extraDays:0,
+      log:[{t:Date.now(),who:"владелец",act:"том создан",info:"том "+v.n+" из "+plan.length}],
+      credit:false                                          // зачёт 990 ₽ — один раз на серию
+    });
+    saveOrder(vo);
+    made.push({n:v.n, id, pages:v.pages, photos:v.photos, label:v.label, tier:v.tier});
+  });
+  state.volumes={series:seriesId, list:made};
+  assemble(); trayRender();
+  volumesDone(made);
+}
+function volumesDone(made){
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>Тома созданы</h3>'+
+    '<p class="note" style="font-size:13.5px">Этот проект стал первым томом: его кадры остались в книге. '+
+    'Остальные тома — отдельные проекты в той же серии, кадры для них ждут в лотке с пометкой «том N».</p>'+
+    '<div class="acc-list">'+made.map(v=>'<div class="acc-row"><span><b>Том '+v.n+'</b>'+
+      '<em>'+esc(v.label)+' · '+v.pages+' страниц · '+v.photos+' фото · тариф «'+v.tier+'» · ожидает оплаты</em></span>'+
+      '<a class="btn ghost" style="padding:4px 10px;font-size:12px" href="?order='+v.id+'">открыть</a></div>').join("")+'</div>'+
+    '<p class="note">Ссылка на том открывает его проект. Участники и оформление у серии общие.</p>'+
+    '<div class="foot" style="margin-top:16px"><button class="btn primary" id="vdOk">Понятно</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("vdOk").addEventListener("click",kill);
+}
+
+/* =============================== обложка (Приложение Б ред. 2, §4)
+   Автоматический выбор «первого подходящего кадра» запрещён: сервис предлагает кандидатов,
+   человек подтверждает, без подтверждения печать не запускается. */
+function coverScore(p){
+  let s=p.score||0;
+  if(p.heroDist!=null) s+=Math.max(0,(0.56-p.heroDist))*1.2;   // герой в кадре
+  if(state.heroUsed&&p.noHero) s-=0.35;
+  const r=(p.w&&p.h)?p.w/p.h:1.4;
+  if(r<=1.05) s+=0.12;                                          // вертикаль или квадрат
+  else if(r>1.6) s-=0.08;
+  if(p.mean<60||p.mean>215) s-=0.25;                            // экспозиция
+  s+=Math.min(0.2,(p.sharp||0)/90);
+  return s;
+}
+function coverCandidates(n){
+  const ok=p=>!p.shot&&!p.dup&&!p.ser&&!p.weak;
+  const list=state.photos.filter(ok).sort((a,b)=>coverScore(b)-coverScore(a));
+  const out=[], seen=new Set();
+  for(const p of list){
+    if(p.scene&&seen.has(p.scene)) continue;                    // не берём два кадра одной сцены
+    if(p.scene) seen.add(p.scene);
+    out.push(p);
+    if(out.length>=(n||9)) break;
+  }
+  return out;
+}
+/* подпись на обложке: повод и дата события, а диапазон лет — только у книги-хроники (§4.3) */
+function coverCaption(){
+  const o=state.order;
+  if(o&&o.date){
+    const occ=(OCCASIONS[o.occasion]||OCCASIONS[state.occasion]||{}).label||"";
+    const d=new Date(o.date+"T12:00:00");
+    const when=isNaN(d)?"":d.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"});
+    return (occ?"К "+occ.toLowerCase().replace(/^день рождения$/,"дню рождения"):"")+(when?" · "+when:"");
+  }
+  const ys=state.photos.filter(p=>p.date).map(p=>new Date(p.date).getUTCFullYear());
+  if(!ys.length) return "";
+  const a=Math.min(...ys), b=Math.max(...ys);
+  return a===b?String(a):a+" — "+b;
+}
+function coverPage(){ return state.pages.find(p=>p.type==="cover"); }
+function coverNote(){
+  const el=$("cvNote"); if(!el) return;
+  const need=state.pages.length&&!state.coverOk&&state.role!=="guest";
+  el.hidden=!need;
+  if(!need){ el.innerHTML=""; return; }
+  el.innerHTML='<span><b>Обложку смотрят первой.</b> Сейчас на ней черновик — выберите кадр, '+
+    'без этого книга не уйдёт в печать.</span><button class="btn ghost" id="cvPick">Выбрать обложку</button>';
+  $("cvPick").addEventListener("click",coverDialog);
+}
+function coverDialog(){
+  const cands=coverCandidates(9), cp=coverPage();
+  if(!cands.length){ toast("Пока не из чего выбирать — добавьте снимки"); return; }
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>Выберите обложку</h3>'+
+    '<p class="note" style="font-size:13.5px">Кандидаты отобраны по резкости, экспозиции и композиции'+
+    (state.heroUsed?', с учётом главного героя':'')+'. Можно взять любой другой кадр из лотка.</p>'+
+    '<div class="cv-grid">'+cands.map(p=>'<button class="cv" data-id="'+p.id+'"'+
+      (cp&&cp.slots[0]===p.id?' data-cur="1"':'')+'><img src="'+p.url+'" alt=""><span>'+
+      (p.date?new Date(p.date).toLocaleDateString("ru-RU"):esc(p.name.slice(0,18)))+'</span></button>').join("")+'</div>'+
+    '<p class="note" id="cvCap"></p>'+
+    '<div class="foot" style="margin-top:16px">'+
+    '<button class="btn ghost" id="cvOwn">Выбрать свой кадр</button>'+
+    '<button class="btn primary" id="cvOk">Подтвердить обложку</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  let pick=(cp&&cp.slots[0])||cands[0].id;
+  const paint=()=>{
+    el.querySelectorAll(".cv").forEach(b=>b.classList.toggle("on",b.dataset.id===pick));
+    const ph=state.byId.get(pick);
+    $("cvCap").textContent=ph?("Подпись на обложке: "+(coverCaption()||"без подписи")):"";
+  };
+  el.querySelectorAll(".cv").forEach(b=>b.addEventListener("click",()=>{ pick=b.dataset.id; paint(); }));
+  paint();
+  $("cvOwn").addEventListener("click",()=>{
+    kill();
+    state.cur=state.pages.indexOf(coverPage()); if(state.cur<0) state.cur=0;
+    state.selSlot=0; inspector(); trayRender(); render(); updHead();
+    toast("Выберите кадр в лотке справа — он встанет на обложку");
+  });
+  $("cvOk").addEventListener("click",()=>{
+    const p=coverPage(); if(p){ p.slots[0]=pick; p.years=coverCaption(); p.touched=true; }
+    state.coverOk=true; kill();
+    inspector(); render(); coverNote(); saveLocal();
+    toast("Обложка подтверждена");
+  });
+}
+
 /* =============================== tray */
 function usedIds(){ const s=new Set(); state.pages.forEach(p=>p.slots.forEach(id=>{if(id)s.add(id);})); return s; }
 /* Пять категорий отбраковки (Приложение Б §2.1): дубль, серия, слабый, не фотография,
@@ -2017,11 +2437,12 @@ function groups(){
   };
 }
 function trayTag(ph){
-  if(ph.shot) return "похоже на скриншот";
+  if(ph.shot) return ph.shotKind||"экран и интерфейс";
   if(ph.dup) return "дубль";
   if(ph.ser) return ph.why||"серия";
   if(ph.weak) return ph.why||"слабый кадр";
   if(ph.noHero) return "без героя";
+  if(ph.vol) return "том "+ph.vol;
   if(ph.over) return "не поместилось в книгу";
   return "";
 }
@@ -2265,6 +2686,12 @@ function buildReport(){
         return ph?{name:ph.name, scene:ph.scene||0, shot:!!ph.shot, weak:!!ph.weak}:null; })}))};
 }
 window.__report=buildReport;     // читается приёмкой и отчётом в интерфейсе
+/* замеры по кадрам — для калибровки порогов на реальном архиве */
+window.__frames=()=>state.photos.map(p=>({name:p.name, cam:!!p.cam, w:p.w, h:p.h,
+  sharp:+(p.sharp||0).toFixed(1), mean:+(p.mean||0).toFixed(0), sat:+(p.sat||0).toFixed(2),
+  flat:+(p.flat||0).toFixed(2), axis:+(p.axis||0).toFixed(2), edge:+(p.edgeShare||0).toFixed(2),
+  frame:+(p.frame||0).toFixed(2), moire:+(p.moire||0).toFixed(2), glare:p.glare?1:0,
+  shot:p.shotKind||"", dup:!!p.dup, ser:!!p.ser, weak:!!p.weak}));
 function reportDialog(){
   const r=buildReport();
   const el=document.createElement("div"); el.className="modal";
@@ -3048,6 +3475,16 @@ function drawReader(){
     cv.style.width=Math.round(W*s)+"px"; cv.style.height=Math.round(H*s)+"px";
     const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0);
     drawPage(c,state.pages[i],s,ph=>ph.thumb);
+    if(state.pages[i].type==="cover"&&!state.coverOk){
+      // §4.2: в предпросмотре обложка помечена как черновик, пока её не подтвердили
+      const w=cv.width/dpr, hh=cv.height/dpr;
+      c.save(); c.fillStyle="rgba(179,38,76,.92)";
+      c.fillRect(0,hh*0.06,w*0.52,hh*0.062);
+      c.fillStyle="#fff"; c.font="600 "+Math.round(hh*0.032)+"px system-ui,sans-serif";
+      c.textBaseline="middle";
+      c.fillText("обложка — черновик",w*0.03,hh*0.091);
+      c.restore();
+    }
     book.appendChild(cv);
   });
   // клик по левой половине — назад, по правой — вперёд
@@ -3171,6 +3608,11 @@ async function exportPdf(){
 }
 $("print").addEventListener("click",()=>{
   if(state.role==="guest"){ toast("Отправить книгу в печать может только организатор"); return; }
+  if(!state.coverOk){                       // §4.2: без подтверждённой обложки печать не идёт
+    toast("Сначала подтвердите обложку — её видят первой");
+    coverDialog();
+    return;
+  }
   exportPdf();
 });
 
