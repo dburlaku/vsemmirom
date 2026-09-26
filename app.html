@@ -118,6 +118,23 @@ h1,h2,h3{text-wrap:balance}
 .acc-acts{display:flex;gap:8px;flex-wrap:wrap}
 .acc-log{margin:0;padding-left:18px;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
 .acc-log b{color:var(--ink);font-weight:600}
+/* экран решения об объёме */
+.vol-opts{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+.vol-opt{display:flex;gap:12px;align-items:flex-start;text-align:left;border:1px solid var(--line);
+  background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;font-family:inherit;color:var(--ink)}
+.vol-opt:hover{border-color:var(--accent)}
+.vol-opt b{display:block;font-size:14.5px;margin-bottom:2px}
+.vol-opt em{font-style:normal;font-size:12.5px;color:var(--muted)}
+/* выбор типа страницы */
+.pt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0}
+@media (max-width:560px){.pt-grid{grid-template-columns:1fr}}
+.pt{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;
+  border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);
+  padding:10px 12px;cursor:pointer;font-family:inherit;color:var(--ink)}
+.pt:hover{border-color:var(--accent)}
+.pt[data-cur="1"]{border-color:var(--accent);background:var(--accent-soft)}
+.pt b{font-size:13.5px;font-weight:600}
+.pt em{font-style:normal;font-size:11.5px;color:var(--muted)}
 /* выбор обложки */
 .cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
 @media (max-width:560px){.cv-grid{grid-template-columns:repeat(2,1fr)}}
@@ -291,6 +308,8 @@ h1,h2,h3{text-wrap:balance}
 .slot .sa{border:1px solid transparent;background:none;color:var(--muted);font-size:11.5px;
   padding:3px 6px;border-radius:4px;cursor:pointer;font-family:inherit}
 .slot .sa:hover{border-color:var(--line);color:var(--ink)}
+.rail .thumb .nm{display:block;font-size:10.5px;color:var(--muted);padding:2px 4px 0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .empty-slot{width:46px;height:34px;border:1px dashed var(--line);border-radius:3px;flex:none}
 .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .tab{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);cursor:pointer;font-size:12px}
@@ -517,6 +536,19 @@ h1,h2,h3{text-wrap:balance}
   </div>
 </section>
 
+<!-- ============ 5b. решение об объёме (ТЗ ред. 6, §5.4) ============ -->
+<section id="s-volume" hidden>
+  <div class="wizard">
+    <div class="crumbs"><b>Книга собрана</b><span class="sep">→</span>Решение об объёме<span class="sep">→</span>Правка</div>
+    <div class="panel">
+      <h2 id="volTitle">Сколько страниц печатаем</h2>
+      <p class="sub" id="volSub"></p>
+      <div class="vol-opts" id="volOpts"></div>
+      <p class="note" id="volNote"></p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ 1b. мои альбомы ============ -->
 <section id="s-albums" hidden>
   <div class="wrap albums">
@@ -594,7 +626,7 @@ h1,h2,h3{text-wrap:balance}
       </div>
       <div class="stat">
         <span>Страниц в альбоме: <b id="pgLabel">24</b></span>
-        <input id="npages" type="number" min="8" max="120" step="2" value="24" style="width:70px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)">
+        <input id="npages" type="number" min="24" max="200" step="4" value="24" style="width:70px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)">
         <span>Формат:</span>
         <select id="fmt" style="padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)">
           <option value="square">21×21 см</option><option value="a4">A4 альбомный</option><option value="a5">A5 альбомный</option>
@@ -680,7 +712,10 @@ h1,h2,h3{text-wrap:balance}
         <span class="hint" id="pageHint"></span>
         <span class="spacer"></span>
         <button class="btn ghost" id="addPage">+ страница</button>
-        <button class="btn ghost" id="delPage">Удалить</button>
+        <button class="btn ghost" id="pageType">Тип</button>
+        <button class="btn ghost" id="delPage">Очистить</button>
+        <button class="btn ghost" id="pagesPlus">+4 стр.</button>
+        <button class="btn ghost" id="pagesMinus">−4 стр.</button>
       </div>
       <div class="canvas-wrap"><canvas id="page" width="800" height="800"></canvas></div>
       <p class="note" id="stageNote"></p>
@@ -816,7 +851,12 @@ function coverRects(){
 }
 function pageRects(p){
   if(p.type==="cover") return coverRects();
-  if(p.type==="text") return [];
+  if(p.type==="text"||p.type==="blank"||p.type==="year") return [];
+  if(p.type==="phototext"){                       // кадр сверху, абзац снизу (§5.2)
+    const {W,H}=dims(), st=S(), M=st.M, innerW=W-2*M;
+    const h=Math.min(innerW*0.66,H*0.52);
+    return [{x:M,y:M,w:innerW,h}];
+  }
   return rects(p.layout);
 }
 
@@ -888,6 +928,30 @@ function drawPage(c,p,s,imgFor){
     lines.forEach(l=>{ if(l)c.fillText(l,st.M*s,y); y+=l?lead:lead*0.55; });
     if(p.sign){ c.fillStyle=st.muted; c.font='italic '+PT(11.4*s).toFixed(1)+'px "PT Serif", Georgia, serif';
       c.fillText(p.sign,st.M*s,y+9*s); }
+  } else if(p.type==="phototext"){
+    const {M}=st, colW=W-2*st.M;
+    const top=Math.min(colW*0.66,H*0.52)+st.M+10;
+    c.textAlign="left"; c.fillStyle=st.ink;
+    if(p.title){ c.font=PT(18*s).toFixed(1)+'px "PT Serif", Georgia, serif';
+      c.fillText(p.title,st.M*s,(top+8)*s); }
+    const f=PT(10.6*s).toFixed(1)+'px "PT Serif", Georgia, serif';
+    const lines=wrapText(c,p.body,f,colW*s); c.font=f;
+    let y=(top+(p.title?26:10))*s; const lead=5.8*s;
+    lines.forEach(l=>{ if(l)c.fillText(l,st.M*s,y); y+=l?lead:lead*0.55; });
+  } else if(p.type==="year"){
+    c.textAlign="center"; c.fillStyle=st.ink;
+    c.font=PT(52*s).toFixed(1)+'px "PT Serif", Georgia, serif';
+    c.fillText(p.title||p.year||"",W*s/2,H*0.52*s);
+    if(p.body){ c.fillStyle=st.muted; c.font=PT(11*s).toFixed(1)+'px "PT Serif", Georgia, serif';
+      c.fillText(p.body,W*s/2,H*0.6*s); }
+  } else if(p.type==="blank"){
+    // пустая страница печатается чистой; в редакторе видно, что место занято
+    if(state.screen==="s-editor"&&!window.__exporting){
+      c.textAlign="center"; c.fillStyle=st.muted; c.globalAlpha=.5;
+      c.font=PT(9*s).toFixed(1)+'px "IBM Plex Sans", sans-serif';
+      c.fillText("пустая страница",W*s/2,H*0.52*s);
+      c.globalAlpha=1;
+    }
   } else if(p.year){
     c.font=PT(7*s).toFixed(1)+'px "IBM Plex Sans", sans-serif';
     const bleed=p.layout==="full";
@@ -937,7 +1001,7 @@ function drawRail(onlyCur){
     state.pages.forEach((p,i)=>{
       const b=document.createElement("button");
       b.className="thumb"; b.draggable=true; b.dataset.i=i;
-      b.innerHTML='<canvas></canvas><span class="num">'+(i+1)+'</span>';
+      b.innerHTML='<canvas></canvas><span class="num">'+(i+1)+'</span><span class="nm"></span>';
       rail.appendChild(b);
     });
   }
@@ -946,6 +1010,9 @@ function drawRail(onlyCur){
     b.classList.toggle("sel",i===state.cur);
     if(onlyCur&&i!==state.cur) return;
     b.dataset.i=i; b.querySelector(".num").textContent=i+1;
+    const nm=b.querySelector(".nm");
+    if(nm){ const p=state.pages[i], special=["cover","blank","year","text","phototext"].includes(p.type);
+      nm.textContent=special?pageName(p,i):""; nm.hidden=!special; }
     const cv=b.querySelector("canvas"), w=132, s=w/W;
     cv.width=w; cv.height=Math.round(H*s);
     drawPage(cv.getContext("2d"),state.pages[i],s,ph=>ph.thumb);
@@ -954,7 +1021,7 @@ function drawRail(onlyCur){
 
 /* =============================== screens */
 function show(id){
-  ["s-landing","s-albums","s-order","s-invite","s-guest","s-setup","s-upload","s-scan","s-editor"].forEach(x=>{ $(x).hidden=(x!==id); });
+  ["s-landing","s-albums","s-order","s-invite","s-guest","s-setup","s-upload","s-scan","s-volume","s-editor"].forEach(x=>{ $(x).hidden=(x!==id); });
   $("siteHeader").hidden = id==="s-editor";
   if(id==="s-albums") albumsRender();
   state.screen=id;
@@ -1054,7 +1121,7 @@ function volumeHint(){
       'Из '+n+' снимков выйдет '+can+' — сейчас выбрано '+state.target+'.</span>'+
       (can!==state.target?'<span class="vh-acts"><button class="btn ghost" id="volFitT">Поставить '+can+'</button></span>':'');
     const bt=$("volFitT");
-    if(bt) bt.addEventListener("click",()=>{ state.target=can; $("npages").value=can; $("pgLabel").textContent=can; volumeHint(); });
+    if(bt) bt.addEventListener("click",()=>{ state.target=normPages(can); $("npages").value=can; $("pgLabel").textContent=can; volumeHint(); });
     return;
   }
   const n=state.photos.length;
@@ -1069,7 +1136,7 @@ function volumeHint(){
       '<span class="vh-acts"><button class="btn ghost" id="volUp">Собрать на '+can+' страниц</button>'+
       '<button class="btn ghost" id="volKeep">Оставить '+want+'</button></span>';
     $("volUp").addEventListener("click",()=>{
-      state.target=can; $("npages").value=can; $("pgLabel").textContent=can; volumeHint();
+      state.target=normPages(can); $("npages").value=can; $("pgLabel").textContent=can; volumeHint();
     });
     $("volKeep").addEventListener("click",()=>{ box.hidden=true; });
     return;
@@ -1083,7 +1150,7 @@ function volumeHint(){
     '<span class="vh-acts"><button class="btn ghost" id="volFit">Собрать на '+can+' страниц</button>'+
     '<button class="btn ghost" id="volAdd">Добавить фото</button></span>';
   $("volFit").addEventListener("click",()=>{
-    state.target=can; $("npages").value=can; $("pgLabel").textContent=can; volumeHint();
+    state.target=normPages(can); $("npages").value=can; $("pgLabel").textContent=can; volumeHint();
   });
   $("volAdd").addEventListener("click",()=>$("pickMore2").click());
 }
@@ -1338,7 +1405,7 @@ const drop=$("drop");
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hot");}));
 drop.addEventListener("drop",e=>{ if(e.dataTransfer&&e.dataTransfer.files.length) intake(e.dataTransfer.files); });
 $("npages").addEventListener("change",e=>{
-  state.target=Math.max(8,Math.min(120,+e.target.value||24));
+  state.target=normPages(e.target.value);
   e.target.value=state.target; $("pgLabel").textContent=state.target; volumeHint();
 });
 $("fmt").addEventListener("change",e=>{ state.fmt=e.target.value; $("edFmt").value=e.target.value; });
@@ -1943,6 +2010,11 @@ async function runScan(){
 
   state.report.book=slotCount();
   state.report.over=photos.filter(p=>p.over).length;
+  // §5.4: решение об объёме показывается один раз, до правки страниц
+  if(!state.volDecided && volumeScreen(false)){
+    toast("Прочитано "+photos.length+" · в книге "+state.report.book);
+    return;
+  }
   show("s-editor");
   toast("Прочитано "+photos.length+" · в книге "+state.report.book+
         " · дублей "+state.report.dupes+" · серий "+state.report.series+
@@ -1994,7 +2066,7 @@ function assemble(){
   if(pool.length<6) pool=state.photos.filter(alive).sort((a,b)=>(a.date||0)-(b.date||0));
   if(!pool.length){ state.pages=[]; return; }
   state.photos.forEach(p=>{ if(!p.vol) p.over=false; });
-  const target=Math.max(8,state.target);
+  const target=normPages(state.target);
   const cover=[...pool].sort((a,b)=>b.score-a.score)[0];
   const last=pool[pool.length-1];
   const mid=pool.filter(p=>p!==cover&&p!==last);
@@ -2073,8 +2145,10 @@ function assemble(){
     }
     if(!p.year) p.year=yearLabel(p.slots);
   });
+  state.pages=pages;
+  padToStep();                                  // §5.1: объём кратен 4
   state.overflow=state.photos.filter(p=>p.over).length;
-  state.pages=pages; state.cur=0; state.selSlot=-1;
+  state.cur=0; state.selSlot=-1;
   $("rail").innerHTML="";
   setBrand(state.title);
   inspector(); trayRender(); updHead(); render(); overflowNote(); coverNote(); saveLocal();
@@ -2094,9 +2168,17 @@ function todoNote(){
   if(state.pending) items.push({key:"add", done:false,
               label:"встроить "+state.pending+" новых кадров",
               act:{id:"tdEmbed",text:"Встроить"}});
-  if(needVol||state.volDecided) items.push({key:"vol", done:!!state.volDecided,
+  if(needVol) items.push({key:"vol", done:false,
               label:"решить с объёмом: в книге "+fits+", в лотке ещё "+over,
               act:state.volDecided?null:{id:"tdVol",text:"Решить"}});
+  const blanks=state.pages.filter(p=>p.type==="blank").length;
+  if(blanks) items.push({key:"blank", done:false,
+              label:"заполнить "+plural(blanks,"пустую страницу","пустые страницы","пустых страниц"),
+              act:{id:"tdBlank",text:"Показать"}});
+  const min=state.order?tierMin(state.order.tier):0;
+  if(min&&state.pages.length<min) items.push({key:"min", done:false,
+              label:"книга короче тарифа: "+state.pages.length+" из "+min+" страниц",
+              act:{id:"tdMin",text:"Решить"}});
   if(state.order) items.push({key:"inv", done:(state.order.invites||[]).some(p=>p.status!=="draft"&&p.status!=="removed"),
               label:"позвать родных",
               act:{id:"tdInv",text:"Позвать"}});
@@ -2110,20 +2192,67 @@ function todoNote(){
   if($("tdEmbed")) $("tdEmbed").addEventListener("click",embedPending);
   if($("tdInv")) $("tdInv").addEventListener("click",()=>$("edInvite").click());
   if($("tdVol")) $("tdVol").addEventListener("click",volumeDialog);
+  if($("tdMin")) $("tdMin").addEventListener("click",volumeDialog);
+  if($("tdBlank")) $("tdBlank").addEventListener("click",()=>{
+    const i=state.pages.findIndex(p=>p.type==="blank");
+    if(i>=0){ state.cur=i; inspector(); render(); updHead();
+      toast("Пустая страница "+(i+1)+" — нажмите «Тип», чтобы её наполнить"); }
+  });
 }
-/* решение по объёму: увеличить, оставить лучшие или разделить на тома (§3.3) */
-function volumeDialog(){
-  const fits=slotCount(), over=state.overflow||0;
-  const need=Math.min(200,Math.ceil((fits+over)/3.2/2)*2);
-  confirmBox({title:"Кадров больше, чем вмещает объём",
-    text:"В книге "+fits+" кадров, в лотке ещё "+over+". Уплотнять вёрстку не буду — "+
-      "можно увеличить объём до "+need+" страниц (тариф «"+tierFor(need)+"»), оставить лучшие кадры "+
-      "или разделить архив на тома.",
-    ok:"Увеличить объём до "+need+" стр.",
-    go:()=>{ state.target=need; $("npages").value=need; $("pgLabel").textContent=need;
-      state.volDecided=true; assemble(); toast("Объём книги — "+need+" страниц"); },
-    alt:{label:"Разделить на тома", go:()=>{ state.volDecided=true; volumesDialog(); }}});
+/* §5.4: решение об объёме — отдельный экран сразу после сборки, один раз.
+   Вернуться к нему можно из чеклиста печати. */
+function volumeSituation(){
+  const over=state.overflow||0, pages=state.pages.length;
+  const min=state.order?tierMin(state.order.tier):0;
+  if(state.order&&min&&pages<min) return "short";
+  if(over>=12&&over>slotCount()*0.5) return "over";
+  return "ok";
 }
+function volumeScreen(fromChecklist){
+  const sit=volumeSituation();
+  if(sit==="ok"&&!fromChecklist){ state.volDecided=true; return false; }
+  const over=state.overflow||0, fits=slotCount(), pages=state.pages.length;
+  const need=normPages((fits+over)/VOL_PER_PAGE);
+  const min=state.order?tierMin(state.order.tier):0;
+  const opts=[];
+  if(sit==="short"){
+    $("volTitle").textContent="Книга короче оплаченного тарифа";
+    $("volSub").textContent="Собрано "+pages+" страниц, а тариф «"+state.order.tier+"» — от "+min+
+      ". Решите, как поступить: вернуться к этому экрану можно из чеклиста печати.";
+    opts.push({k:"add", t:"Добавить кадры", d:"Открою загрузку — доберём книгу до "+min+" страниц"});
+    opts.push({k:"down", t:"Сменить тариф с возвратом разницы",
+      d:"Тариф станет «"+tierFor(pages)+"», разницу вернём на карту после подключения оплаты"});
+    opts.push({k:"asis", t:"Оставить как есть", d:"Напечатаем "+pages+" страниц по текущему тарифу"});
+  }else{
+    $("volTitle").textContent="Кадров больше, чем вмещает объём";
+    $("volSub").textContent="В книге "+fits+" кадров, в лотке ещё "+over+
+      ". Уплотнять вёрстку не буду — выберите, как поступить.";
+    opts.push({k:"more", t:"Увеличить объём до "+need+" страниц",
+      d:"Тариф «"+tierFor(need)+"», войдёт почти всё отобранное"});
+    opts.push({k:"best", t:"Оставить лучшие", d:"Книга останется на "+pages+" страниц, остальные кадры ждут в лотке"});
+    opts.push({k:"vol",  t:"Разделить на тома", d:"Связанные проекты с общим оформлением и нумерацией"});
+  }
+  $("volOpts").innerHTML=opts.map(o=>'<button class="vol-opt" data-k="'+o.k+'"><span>'+
+    '<b>'+esc(o.t)+'</b><em>'+esc(o.d)+'</em></span></button>').join("");
+  $("volNote").textContent="Ответ запомню: этот экран показывается один раз.";
+  $("volOpts").querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.k;
+    state.volDecided=true;
+    if(k==="more"){ state.target=normPages(need); $("npages").value=state.target; $("pgLabel").textContent=state.target;
+      assemble(); toast("Объём книги — "+state.target+" страниц"); }
+    if(k==="vol"){ show("s-editor"); volumesDialog(); return; }
+    if(k==="add"){ show("s-upload"); return; }
+    if(k==="down"&&state.order){
+      const t=tierFor(state.pages.length);
+      state.order.tier=t; saveOrder(state.order); orderBar(); projCard();
+      toast("Тариф изменён на «"+t+"» — разницу вернём после подключения оплаты");
+    }
+    show("s-editor"); todoNote();
+  }));
+  show("s-volume");
+  return true;
+}
+function volumeDialog(){ volumeScreen(true); }
 $("go-scan").addEventListener("click",()=>{ runScan().catch(err=>{ crash("сборка",err); show("s-upload"); }); });
 
 /* =============================== inspector */
@@ -2187,6 +2316,17 @@ function inspector(){
   if(p.type==="cover"){
     h+='<h3>Обложка</h3>'+rowHtml("Название",'<input type="text" data-k="title" value="'+esc(p.title)+'">')+
        rowHtml("Подзаголовок",'<input type="text" data-k="years" value="'+esc(p.years)+'">')+slotList(p);
+  } else if(p.type==="blank"){
+    h+='<h3>Пустая страница</h3><p class="note">Держит кратность объёма. Нажмите «Тип», '+
+       'чтобы сделать из неё страницу с фото или текстом.</p>';
+  } else if(p.type==="year"){
+    h+='<h3>Титул года</h3>'+rowHtml("Год или период",'<input type="text" data-k="title" value="'+esc(p.title||"")+'">')+
+       rowHtml("Подпись",'<input type="text" data-k="body" value="'+esc(p.body||"")+'">');
+  } else if(p.type==="phototext"){
+    h+='<h3>Фото и текст</h3>'+rowHtml("Заголовок",'<input type="text" data-k="title" value="'+esc(p.title||"")+'">')+
+       rowHtml("Текст",'<textarea data-k="body">'+esc(p.body||"")+'</textarea>')+
+       '<button class="btn" id="inspAI" style="width:100%;margin-bottom:10px">Написать текст с ИИ</button>'+
+       slotList(p);
   } else if(p.type==="text"){
     h+='<h3>Текстовая страница</h3>'+rowHtml("Заголовок",'<input type="text" data-k="title" value="'+esc(p.title)+'">')+
        rowHtml("Текст",'<textarea data-k="body">'+esc(p.body)+'</textarea>')+
@@ -2242,11 +2382,160 @@ function inspector(){
   }));
 }
 
+/* =============================== типы страниц (ТЗ ред. 6, §5.2) */
+const PAGE_TYPES=[
+  {k:"one",   name:"Фото · одно",    hint:"кадр крупно, акцент раз в 6–8 страниц"},
+  {k:"grid",  name:"Фото · сетка",   hint:"два, три или четыре кадра"},
+  {k:"phototext", name:"Фото и текст", hint:"кадр и абзац истории"},
+  {k:"text",  name:"Только текст",   hint:"вступление, пожелания, рассказ"},
+  {k:"year",  name:"Титул года",     hint:"разделитель периода"},
+  {k:"blank", name:"Пустая",         hint:"держит кратность объёма"}
+];
+function pageKind(p){
+  if(!p) return "";
+  if(p.type==="cover") return "cover";
+  if(p.type==="blank") return "blank";
+  if(p.type==="year") return "year";
+  if(p.type==="phototext") return "phototext";
+  if(p.type==="text") return "text";
+  return p.layout==="one"||p.layout==="full"?"one":"grid";
+}
+/* имя страницы в списке: у служебных — своё (§5.2) */
+function pageName(p,i){
+  if(p.type==="cover") return "Обложка";
+  if(p.type==="blank") return "Пустая";
+  if(p.type==="year") return "Титул "+(p.title||p.year||"");
+  if(p.type==="text"){
+    const t=(p.title||"").toLowerCase();
+    if(/вступ|несколько слов/.test(t)) return "Вступление";
+    if(/пожелан|что дальше|на память|как это было/.test(t)) return "Пожелания";
+    return p.title||"Текст";
+  }
+  if(p.type==="phototext") return "Фото и текст";
+  return "Страница "+(i+1);
+}
+function blankPage(){ return {type:"blank",slots:[],focal:[],year:""}; }
+function makePage(kind){
+  if(kind==="blank") return blankPage();
+  if(kind==="text")  return {type:"text",title:"Заголовок",body:"",sign:"",slots:[],focal:[]};
+  if(kind==="year")  return {type:"year",title:String(new Date().getFullYear()),slots:[],focal:[],year:""};
+  if(kind==="phototext") return {type:"phototext",title:"",body:"",slots:[nextFree([])],focal:[],year:""};
+  if(kind==="one")   return {type:"photos",layout:"one",slots:[nextFree([])],focal:[],year:""};
+  const free=groups().free.length;
+  const lay=free>=4?"quad":free>=3?"trio":free>=2?"two":"one";
+  const slots=[]; for(let i=0;i<CAP[lay];i++) slots.push(nextFree(slots));
+  return {type:"photos",layout:lay,slots,year:yearLabel(slots),focal:[]};
+}
+/* тип спрашивается при создании и меняется у существующей страницы,
+   содержимое переносится по возможности (§5.2) */
+function pageTypeDialog(mode){
+  const cur=state.pages[state.cur];
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>'+(mode==="new"?"Какая страница?":"Тип страницы")+'</h3>'+
+    '<div class="pt-grid">'+PAGE_TYPES.map(t=>'<button class="pt" data-k="'+t.k+'"'+
+      (mode==="change"&&pageKind(cur)===t.k?' data-cur="1"':'')+'><b>'+t.name+'</b><em>'+t.hint+'</em></button>').join("")+'</div>'+
+    '<p class="note">'+(mode==="new"
+      ? "Новая страница встанет после текущей. Объём книги не меняется: кратность 4 держат пустые страницы."
+      : "Содержимое перенесётся, если подходит: кадры останутся кадрами, текст — текстом.")+'</p>'+
+    '<div class="foot sticky" style="margin-top:14px"><button class="btn ghost" id="ptNo">Отмена</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("ptNo").addEventListener("click",kill);
+  el.querySelectorAll(".pt").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.k;
+    if(mode==="new") addPageOfKind(k); else changePageKind(k);
+    kill();
+  }));
+}
+function addPageOfKind(kind){
+  const p=makePage(kind);
+  state.pages.splice(state.cur+1,0,p);
+  state.cur++;
+  // объём кратен 4: добавление страницы забирает ближайшую пустую, иначе объём растёт на 4
+  const blanks=state.pages.filter(x=>x.type==="blank");
+  if(state.pages.length%PAGE_STEP!==0){
+    if(blanks.length){ const i=state.pages.indexOf(blanks[blanks.length-1]); if(i>state.cur) state.pages.splice(i,1); }
+  }
+  padToStep();
+  $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); todoNote(); saveLocal();
+}
+function changePageKind(kind){
+  const p=state.pages[state.cur], np=makePage(kind);
+  // переносим, что подходит
+  if((p.slots||[]).length&&(np.slots||[]).length){
+    for(let i=0;i<np.slots.length&&i<p.slots.length;i++) if(p.slots[i]) np.slots[i]=p.slots[i];
+  }
+  if(p.title&&("title" in np)) np.title=p.title;
+  if(p.body&&("body" in np)) np.body=p.body;
+  if(p.year&&("year" in np)) np.year=p.year;
+  np.touched=true;
+  state.pages[state.cur]=np;
+  $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); todoNote(); saveLocal();
+}
+/* объём держим кратным 4 пустыми страницами */
+function padToStep(){
+  // §5.1: объём кратен 4 и не меньше 24 — добор пустыми страницами
+  while(state.pages.length<PAGE_MIN||state.pages.length%PAGE_STEP!==0) state.pages.push(blankPage());
+}
+/* §5.1: удаление страницы не меняет объём — страница очищается и помечается «пустая» */
+function clearPage(){
+  const p=state.pages[state.cur];
+  if(!p||p.type==="cover"){ toast("Обложку убрать нельзя — можно сменить кадр"); return; }
+  confirmBox({title:"Очистить страницу "+(state.cur+1)+"?",
+    text:"Объём книги не изменится: страница станет пустой и останется в макете, чтобы держать кратность 4. "+
+      ((p.slots||[]).filter(Boolean).length?"Кадры вернутся в лоток.":"")+
+      " Убрать страницы совсем можно командой «Убрать 4 страницы».",
+    ok:"Очистить",
+    go:()=>{ snapshot("перед очисткой страницы");
+      state.pages[state.cur]=blankPage();
+      $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); todoNote(); saveLocal();
+      toast("Страница очищена и помечена пустой"); }});
+}
+/* §5.1: отдельные команды на четыре страницы, с предпросмотром, какие уйдут */
+function pagesMinus(){
+  if(state.pages.length-PAGE_STEP<PAGE_MIN){ toast("Меньше "+PAGE_MIN+" страниц книга не печатается"); return; }
+  // уходят последние четыре, сначала пустые
+  const idx=[];
+  for(let i=state.pages.length-1;i>=0&&idx.length<PAGE_STEP;i--){
+    if(state.pages[i].type==="blank") idx.push(i);
+  }
+  for(let i=state.pages.length-1;i>=0&&idx.length<PAGE_STEP;i--){
+    if(!idx.includes(i)&&state.pages[i].type!=="cover") idx.push(i);
+  }
+  idx.sort((a,b)=>a-b);
+  const names=idx.map(i=>(i+1)+" · "+pageName(state.pages[i],i)).join(", ");
+  const frames=idx.reduce((n,i)=>n+(state.pages[i].slots||[]).filter(Boolean).length,0);
+  confirmBox({title:"Убрать 4 страницы?",
+    text:"Уйдут страницы "+names+"."+(frames?" Кадров вернётся в лоток: "+frames+".":"")+
+      " Объём станет "+(state.pages.length-PAGE_STEP)+" страниц, тариф «"+tierFor(state.pages.length-PAGE_STEP)+"».",
+    ok:"Убрать 4 страницы",
+    go:()=>{ snapshot("перед уменьшением объёма");
+      idx.slice().reverse().forEach(i=>state.pages.splice(i,1));
+      state.target=normPages(state.pages.length);
+      $("npages").value=state.target; $("pgLabel").textContent=state.target;
+      state.cur=Math.min(state.cur,state.pages.length-1);
+      $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); todoNote(); saveLocal();
+      toast("Объём книги — "+state.pages.length+" страниц"); }});
+}
+function pagesPlus(){
+  const free=groups().free.length;
+  snapshot("перед увеличением объёма");
+  for(let i=0;i<PAGE_STEP;i++){
+    const p=free>i*2?makePage("grid"):blankPage();
+    state.pages.splice(state.pages.length-1,0,p);
+  }
+  state.target=normPages(state.pages.length);
+  $("npages").value=state.target; $("pgLabel").textContent=state.target;
+  $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); todoNote(); saveLocal();
+  toast("Добавлено 4 страницы · объём "+state.pages.length+", тариф «"+tierFor(state.pages.length)+"»");
+}
+
 /* =============================== тома (Приложение Б ред. 2, §7)
    Когда отобранных кадров больше, чем вмещает максимум тарифа, человек выбирает:
    увеличить объём, оставить лучшие или разделить архив на связанные тома. */
 const VOL_PER_PAGE=3.2;                       // столько кадров в среднем ложится на страницу
-function volPages(n){ return Math.max(24,Math.min(200,Math.ceil(n/VOL_PER_PAGE/2)*2)); }
+function volPages(n){ return normPages(Math.ceil(n/VOL_PER_PAGE)); }
 function volPool(){
   return state.photos.filter(p=>!p.dup&&!p.weak&&!p.shot&&!p.ser)
     .sort((a,b)=>(a.date||0)-(b.date||0));
@@ -2335,7 +2624,7 @@ function makeVolumes(plan){
   const mine=new Set(first.frames.map(p=>p.id));
   state.photos.forEach(p=>{ p.vol=0; });
   rest.forEach(v=>v.frames.forEach(p=>{ p.vol=v.n; p.over=true; p.why="том "+v.n; }));
-  state.target=first.pages; $("npages").value=first.pages; $("pgLabel").textContent=first.pages;
+  state.target=normPages(first.pages); $("npages").value=first.pages; $("pgLabel").textContent=first.pages;
   const baseTitle=((o&&o.title)||state.title||"Книга историй").replace(/ · том \d+$/,"");
   state.title=baseTitle+" · том 1";
   const cov=state.pages.find(x=>x.type==="cover"); if(cov) cov.title=state.title;
@@ -2632,17 +2921,11 @@ $("rail").addEventListener("drop",e=>{
   $("rail").innerHTML=""; render(); inspector(); updHead(); saveLocal();
 });
 $("rail").addEventListener("dragend",()=>{ dragI=-1; [...$("rail").children].forEach(c=>c.classList.remove("drag","over")); });
-$("addPage").addEventListener("click",()=>{
-  const slots=[]; const kind=groups().free.length>=3?"trio":groups().free.length===2?"two":"one";
-  for(let i=0;i<CAP[kind];i++) slots.push(nextFree(slots));
-  state.pages.splice(state.cur+1,0,{type:"photos",layout:kind,slots,year:yearLabel(slots),focal:[]});
-  state.cur++; $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); saveLocal();
-});
-$("delPage").addEventListener("click",()=>{
-  if(state.pages.length<=1) return;
-  state.pages.splice(state.cur,1); state.cur=Math.max(0,state.cur-1);
-  $("rail").innerHTML=""; render(); inspector(); trayRender(); updHead(); saveLocal();
-});
+$("addPage").addEventListener("click",()=>pageTypeDialog("new"));
+$("pageType").addEventListener("click",()=>pageTypeDialog("change"));
+$("delPage").addEventListener("click",clearPage);
+$("pagesPlus").addEventListener("click",pagesPlus);
+$("pagesMinus").addEventListener("click",pagesMinus);
 function filledPages(){
   return state.pages.filter(p=>p.type!=="photos"||p.slots.every(Boolean)).length;
 }
@@ -2650,8 +2933,10 @@ function updHead(){
   const p=state.pages[state.cur]; if(!p) return;
   $("pageTitle").textContent="Страница "+(state.cur+1)+" из "+state.pages.length;
   const fill=filledPages();
-  $("pageHint").textContent=(p.type==="cover"?"обложка":p.type==="text"?"текст":"фото · "+LAYOUT_LABEL[p.layout])+
-    " · заполнено "+fill+" из "+state.pages.length+" страниц";
+  const kindName={cover:"обложка",blank:"пустая",year:"титул года",phototext:"фото и текст",text:"текст"}[p.type]
+    ||("фото · "+LAYOUT_LABEL[p.layout]);
+  $("pageHint").textContent=kindName+" · заполнено "+fill+" из "+state.pages.length+" страниц"+
+    (state.pages.length%PAGE_STEP?" · объём не кратен 4":"");
   const f=FORMATS[state.fmt];
   $("stageNote").textContent="Лист "+(f.w-2*f.bleed)+"×"+(f.h-2*f.bleed)+" мм плюс вылеты "+f.bleed+" мм · экспорт 300 dpi";
 }
@@ -2741,6 +3026,7 @@ function buildReport(){
 }
 window.__report=buildReport;     // читается приёмкой и отчётом в интерфейсе
 /* замеры по кадрам — для калибровки порогов на реальном архиве */
+window.__cur=()=>state.cur;
 window.__frames=()=>state.photos.map(p=>({name:p.name, cam:!!p.cam, w:p.w, h:p.h,
   sharp:+(p.sharp||0).toFixed(1), mean:+(p.mean||0).toFixed(0), sat:+(p.sat||0).toFixed(2),
   flat:+(p.flat||0).toFixed(2), axis:+(p.axis||0).toFixed(2), edge:+(p.edgeShare||0).toFixed(2),
@@ -2848,7 +3134,18 @@ function embedPending(){
 
 
 /* =============================== заказ как сущность (Приложение А ред. 2, §2–§5) */
-const TIER_START={"Момент":24,"Глава":48,"Жизнь":81,"С редактором":81};
+const TIER_START={"Момент":24,"Глава":48,"Жизнь":84,"С редактором":84};
+const PAGE_STEP=4, PAGE_MIN=24, PAGE_MAX=200;
+/* объём всегда кратен 4 и не меньше 24 (§5.1) */
+function normPages(n){
+  n=Math.round((+n||PAGE_MIN)/PAGE_STEP)*PAGE_STEP;
+  return Math.max(PAGE_MIN,Math.min(PAGE_MAX,n));
+}
+/* минимальный объём оплаченного тарифа — для проверки нижней границы (§3) */
+function tierMin(name){
+  const t=TIERS.find(x=>x.name===name);
+  return t?t.min:PAGE_MIN;
+}
 const OCC_BY_KEY={mom:"jubilee",wedding:"wedding",work:"other",grad:"family",other:"other"};
 const INV_LIMIT=20;                       // §4: лимит участников по тарифу
 const BURST_N=8, BURST_MS=10*60*1000;     // §4: защита от расползания общей ссылки
@@ -2946,7 +3243,7 @@ function applyOrder(o,role){
   state.title=o.title||"Книга историй";
   if(o.occasion&&OCCASIONS[o.occasion]) state.occasion=o.occasion;
   const start=TIER_START[o.tier]||24;
-  state.target=start; $("npages").value=start; $("pgLabel").textContent=start;
+  state.target=normPages(start); $("npages").value=state.target; $("pgLabel").textContent=state.target;
   $("a-title").value=state.title;
   setBrand(state.title);
   autoClose(o);
@@ -3671,6 +3968,16 @@ $("print").addEventListener("click",()=>{
     coverDialog();
     return;
   }
+  const minT=state.order?tierMin(state.order.tier):0;
+  if(minT&&state.pages.length<minT){        // §3: проверка нижней границы тарифа
+    toast("В книге "+state.pages.length+" страниц, тариф «"+state.order.tier+"» — от "+minT);
+    volumeDialog();
+    return;
+  }
+  if(state.pages.length%PAGE_STEP){
+    padToStep(); $("rail").innerHTML=""; render(); updHead();
+    toast("Добавил пустые страницы: объём книги кратен 4");
+  }
   exportPdf();
 });
 
@@ -3905,7 +4212,7 @@ $("gvLook").addEventListener("click",()=>{
     state.style=pr.style; $("edStyle").value=pr.style;
     [...$("styles").children].forEach(c=>c.classList.toggle("on",c.dataset.k===pr.style));
   }
-  if(pr.target){ state.target=pr.target; $("npages").value=pr.target; $("pgLabel").textContent=pr.target; }
+  if(pr.target){ state.target=normPages(pr.target); $("npages").value=pr.target; $("pgLabel").textContent=pr.target; }
 })();
 acctPaint();
 upCounts();

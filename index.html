@@ -337,6 +337,7 @@ const prevOrder=saved.order||null;
 // подбор всегда начинается с чистого листа: старые ответы не подставляются (баг-лист §4)
 const state={i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,
   urgent:false,credit:false,done:false,lead:null,order:null};
+let firstRender=true;
 const fmt=n=>n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽";
 function daysLeft(){if(!state.a.date)return null;const d=new Date(state.a.date+"T12:00:00");return Math.round((d-new Date())/864e5);}
 function recommend(){
@@ -367,11 +368,15 @@ function prevLine(){
   el.innerHTML='У вас уже есть '+(prevOrder.title||"книга").toLowerCase()+
     ' — <a href="app.html?order='+prevOrder.id+'">открыть проект</a>';
 }
+// восстановление прокрутки браузером отключено: страница открывается сверху (ТЗ ред. 6, §2)
+try{ if("scrollRestoration" in history) history.scrollRestoration="manual"; }catch(_){}
+window.addEventListener("pageshow",()=>{ if(!location.hash) window.scrollTo(0,0); });
 function render(keepScroll){
   saveQuiz();
   prevLine();
   const box=$("#quizBox");
-  if(!keepScroll) setTimeout(scrollToQuiz,30);
+  if(!keepScroll&&!firstRender) setTimeout(scrollToQuiz,30);
+  firstRender=false;
   if(state.done) return renderDone(box);
   if(state.i<Q.length) return renderQ(box);
   renderResult(box);
