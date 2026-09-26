@@ -94,8 +94,9 @@ location /api/ {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 60s;
-    client_max_body_size 16m;
+    proxy_read_timeout 300s;
+    proxy_request_buffering off;   # снимки участников текут сквозь, а не копятся на диске
+    client_max_body_size 48m;
 }
 NG
 SITE=/etc/nginx/sites-available/$DOMAIN

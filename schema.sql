@@ -57,6 +57,21 @@ create table if not exists layouts (
   updated_at timestamptz not null default now()
 );
 
+-- оригиналы снимков: сами файлы лежат в S3, здесь только метаданные и кто прислал
+create table if not exists files (
+  id         text primary key,
+  order_id   text not null references orders(id) on delete cascade,
+  invite_id  text references invites(id) on delete set null,
+  okey       text not null,                        -- ключ объекта в хранилище
+  name       text not null default '',
+  mime       text not null default 'image/jpeg',
+  size       bigint not null default 0,
+  taken_at   timestamptz,
+  w          integer, h integer,
+  created_at timestamptz not null default now()
+);
+create index if not exists files_order on files(order_id, created_at);
+
 -- входы по общей ссылке: защита от расползания (§4 Приложения А)
 create table if not exists hits (
   order_id text not null references orders(id) on delete cascade,

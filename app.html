@@ -626,6 +626,7 @@ h1,h2,h3{text-wrap:balance}
         <div class="up-grid" id="upGrid"></div>
         <p class="note" id="upSkip"></p>
         <p class="note" id="upHeic" hidden></p>
+        <p class="note" id="upSend" hidden></p>
       </div>
       <div class="f" style="margin-top:20px">
         <label>Главный герой — необязательно</label>
@@ -1291,6 +1292,7 @@ async function intake(list){
     await askGuest();
   }
   const all=[...list];
+  const wasHere=new Set(state.photos.map(p=>p.id));   // чтобы знать, что именно добавилось
   const files=all.filter(f=>/\.(jpe?g|png|webp)$/i.test(f.name));
   const heics=all.filter(f=>/\.(heic|heif)$/i.test(f.name));
   upSkipText();
@@ -1333,7 +1335,11 @@ async function intake(list){
   }
   intakeBusy=false; upCounts();
   $("upBar").style.width="100%";
-  if(state.role==="guest"&&(files.length||heics.length)) guestCount(files.length+heics.length);
+  if(state.role==="guest"&&(files.length||heics.length)){
+    const fresh=state.photos.filter(p=>!wasHere.has(p.id));
+    if(API.on&&API.uploads&&state.guestToken) await guestUpload(fresh);
+    else guestCount(fresh.length);       // без сервера — только счётчик, как раньше
+  }
 }
 /* один кадр: читаем, меряем, кладём в набор */
 async function addPhoto(f,known){
@@ -2943,6 +2949,7 @@ function groups(){
   };
 }
 function trayTag(ph){
+  if(ph.from&&!ph.shot&&!ph.dup&&!ph.ser&&!ph.weak&&!ph.over) return "от "+ph.from;
   if(ph.shot) return ph.shotKind||"экран и интерфейс";
   if(ph.dup) return "дубль";
   if(ph.ser) return ph.why||"серия";
@@ -3362,14 +3369,15 @@ function saveOrder(o){
    устройства, а не только в браузере организатора. Если сервера рядом нет
    (артефакт, файл с диска, GitHub Pages) — всё работает как раньше, на localStorage. */
 const API={
-  on:false, base:"/api",
+  on:false, uploads:false, base:"/api",
   async probe(){
     try{
       const c=new AbortController(), t=setTimeout(()=>c.abort(),3000);
       const r=await fetch(API.base+"/health",{signal:c.signal,cache:"no-store"});
       clearTimeout(t);
-      API.on = r.ok && ((await r.json())||{}).ok===true;
-    }catch(_){ API.on=false; }
+      const j=r.ok?((await r.json())||{}):{};
+      API.on=j.ok===true; API.uploads=!!j.uploads;
+    }catch(_){ API.on=false; API.uploads=false; }
     return API.on;
   },
   async call(method,path,body){
@@ -3451,6 +3459,85 @@ const GUEST_MSG={
   limit:"Мест больше нет: в книгу входит до "+20+" участников. Напишите организатору.",
   too_many:"Слишком много попыток за минуту. Подождите и откройте ссылку снова."
 };
+/* Оригиналы участника уезжают на сервер: иначе его снимки остаются у него в браузере
+   и в книгу организатора не попадают. Файл идёт как есть, метаданные — в адресе. */
+async function guestUpload(list){
+  if(!(API.on&&API.uploads&&state.role==="guest"&&state.guestToken)) return 0;
+  const box=$("upSend"); if(box){ box.hidden=false; }
+  let ok=0, bad=0, i=0;
+  for(const ph of list){
+    const f=ph.heic||ph.file; if(!f) continue;
+    i++;
+    if(box) box.textContent="Отправляю родным в книгу: "+i+" из "+list.length;
+    try{
+      const q=new URLSearchParams({name:ph.name||"photo.jpg", mime:f.type||"image/jpeg"});
+      if(ph.date) q.set("taken",String(ph.date));
+      if(ph.w) q.set("w",String(ph.w));
+      if(ph.h) q.set("h",String(ph.h));
+      const r=await fetch(API.base+"/i/"+encodeURIComponent(state.guestToken)+"/file?"+q.toString(),
+        {method:"POST", headers:{"content-type":f.type||"image/jpeg"}, body:f});
+      if(!r.ok){
+        const e=await r.json().catch(()=>({}));
+        if(e.error==="collect_closed"){ toast("Организатор закрыл сбор — материалы уже не принимаются"); break; }
+        throw new Error(e.error||r.status);
+      }
+      ok++;
+    }catch(_){ bad++; }
+  }
+  try{ await API.call("POST","/i/"+encodeURIComponent(state.guestToken)+"/uploaded",{n:ok}); }catch(_){}
+  if(box){
+    box.textContent = bad
+      ? "Отправлено организатору: "+ok+", не удалось: "+bad+" — попробуйте добавить их ещё раз"
+      : "Отправлено организатору: "+ok+" — можно закрывать страницу";
+    setTimeout(()=>{ if(box) box.hidden=true; },bad?12000:6000);
+  }
+  if(state.guest){ state.guest.items=(state.guest.items||0)+ok; guestPaint(); }
+  return ok;
+}
+/* Кадры родных на стороне организатора: сначала узнаём, сколько их, забираем по кнопке. */
+async function countGuestFiles(){
+  const o=state.order;
+  if(!(API.on&&o&&o.server&&state.role!=="guest")) return 0;
+  try{
+    const r=await API.call("GET","/orders/"+encodeURIComponent(o.id)+"/files");
+    state.srvFiles=r.files||[];
+  }catch(_){ state.srvFiles=[]; }
+  const have=new Set(state.photos.map(p=>p.srvId).filter(Boolean));
+  state.srvNew=state.srvFiles.filter(f=>!have.has(f.id)).length;
+  return state.srvNew;
+}
+async function pullGuestFiles(){
+  const o=state.order; if(!o) return 0;
+  const have=new Set(state.photos.map(p=>p.srvId).filter(Boolean));
+  const list=(state.srvFiles||[]).filter(f=>!have.has(f.id));
+  if(!list.length){ toast("Новых кадров от родных нет"); return 0; }
+  show("s-upload"); $("uploader").hidden=false;
+  intakeBusy=true; upCounts();
+  const known=new Set(state.photos.map(p=>p.name+"|"+p.size));
+  let n=0;
+  for(const f of list){
+    $("upBar").style.width=Math.round(n/list.length*100)+"%";
+    if($("upSend")){ $("upSend").hidden=false; $("upSend").textContent="Забираю кадры от родных: "+(n+1)+" из "+list.length; }
+    try{
+      const r=await fetch(API.base+f.url.replace(/^\/api/,""),{cache:"no-store"});
+      if(!r.ok) throw new Error(r.status);
+      const blob=await r.blob();
+      const file=new File([blob],f.name||"photo.jpg",{type:f.mime||"image/jpeg",lastModified:f.taken||Date.now()});
+      const ph=await addPhoto(file,known);
+      if(ph){ ph.srvId=f.id; ph.from=f.who||"участник"; }
+    }catch(_){ }
+    n++;
+  }
+  intakeBusy=false;
+  $("upBar").style.width="100%";
+  if($("upSend")){ $("upSend").textContent="Кадры от родных забраны: "+n; setTimeout(()=>{$("upSend").hidden=true;},6000); }
+  upCounts();
+  await countGuestFiles();
+  projCard();
+  if(state.pages.length){ classifyNew(state.photos.filter(p=>p.srvId&&!p.dup&&!p.weak&&!p.shot&&!p.ser&&!p.why)); trayRender(); todoNote(); }
+  toast("Забрал "+n+" кадров от родных");
+  return n;
+}
 async function guestOpenServer(token){
   try{
     applyGuestView(await API.call("GET","/i/"+encodeURIComponent(token)),token);
@@ -3594,7 +3681,13 @@ function projCard(){
           (dl.left>=0?' · осталось '+plural(dl.left,"день","дня","дней"):' · срок прошёл')+'</span>':'')+
       (guest?'':'<span>'+invitedCount(o)+' из '+INV_LIMIT+' участников'+
         (joined(o)?', вошли '+joined(o):'')+'</span>')+
-    '</div>';
+    '</div>'+
+    // кадры родных лежат на сервере; забираем их по кнопке, а не молча при открытии
+    (!guest&&state.srvNew?'<div class="acts"><button class="btn primary" id="projPull">'+
+      'Забрать '+plural(state.srvNew,"кадр","кадра","кадров")+' от родных</button>'+
+      '<span class="note" style="margin:0;align-self:center">прислали: '+
+        esc([...new Set((state.srvFiles||[]).map(f=>f.who))].join(", "))+'</span></div>':'');
+  if($("projPull")) $("projPull").addEventListener("click",()=>{ pullGuestFiles(); });
   // кнопки на шаге загрузки живут в одном месте: «Добавить фото» в рамке, «Позвать родных» в шапке
 }
 function orderBar(){
@@ -4560,6 +4653,7 @@ const BOOT=(async function(){
   applyOrder(o,"owner");
   window.__orderStart = q.get("invite")==="1" ? "s-invite" : "s-upload";
   if(window.__orderStart==="s-invite") invRender();
+  if(API.on&&o.server){ await countGuestFiles(); projCard(); }
 })();
 
 // настройки из прошлого визита

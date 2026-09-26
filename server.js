@@ -8,6 +8,7 @@
 */
 "use strict";
 const http = require("node:http");
+const https = require("node:https");
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 
@@ -18,6 +19,61 @@ const INV_LIMIT = 20;                   // участников на книгу 
 const BURST_N = 8, BURST_MIN = 10;      // входов по общей ссылке за 10 минут
 const MAX_BODY = 1 << 20;               // 1 МБ на запрос, кроме макета
 const MAX_LAYOUT = 8 << 20;             // макет книги — до 8 МБ
+const MAX_FILE = 40 << 20;              // один снимок — до 40 МБ
+const FILES_PER_PERSON = 500;           // сколько кадров может прислать один участник
+
+/* =============================== S3: оригиналы снимков
+   Файлы идут через наш сервер, а не напрямую из браузера: хранилище остаётся закрытым,
+   доступ проверяем мы сами, и нет возни с CORS у провайдера. Настройки — в /etc/vm-api.env;
+   если их нет, загрузка просто выключена, остальное работает. */
+const S3 = {
+  endpoint: (process.env.S3_ENDPOINT || "").replace(/\/+$/, ""),
+  region: process.env.S3_REGION || "ru-1",
+  bucket: process.env.S3_BUCKET || "",
+  key: process.env.S3_KEY || "",
+  secret: process.env.S3_SECRET || "",
+  style: (process.env.S3_STYLE || "path").toLowerCase()   // path | vhost
+};
+S3.ready = !!(S3.endpoint && S3.bucket && S3.key && S3.secret);
+
+const sha256hex = b => crypto.createHash("sha256").update(b).digest("hex");
+const hmac = (k, s) => crypto.createHmac("sha256", k).update(s).digest();
+/* RFC 3986: encodeURIComponent оставляет !'()* — S3 их кодирует */
+const uriEnc = s => encodeURIComponent(s).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+
+function s3Target(key) {
+  const u = new URL(S3.endpoint);
+  const path = "/" + key.split("/").map(uriEnc).join("/");
+  if (S3.style === "vhost") return { host: S3.bucket + "." + u.host, protocol: u.protocol, path };
+  return { host: u.host, protocol: u.protocol, path: "/" + uriEnc(S3.bucket) + path };
+}
+/* Подпись SigV4 заголовками; тело не хэшируем (UNSIGNED-PAYLOAD) — иначе пришлось бы
+   держать весь файл в памяти ради хэша. Канал закрыт TLS. */
+function s3Sign(method, target, extraHeaders) {
+  const t = now().toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const date = t.slice(0, 8);
+  const scope = `${date}/${S3.region}/s3/aws4_request`;
+  const headers = Object.assign({
+    host: target.host,
+    "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+    "x-amz-date": t
+  }, extraHeaders || {});
+  const names = Object.keys(headers).map(h => h.toLowerCase()).sort();
+  const canonHeaders = names.map(n => n + ":" + String(headers[Object.keys(headers).find(k => k.toLowerCase() === n)]).trim() + "\n").join("");
+  const signed = names.join(";");
+  const canonical = [method, target.path, "", canonHeaders, signed, "UNSIGNED-PAYLOAD"].join("\n");
+  const sts = ["AWS4-HMAC-SHA256", t, scope, sha256hex(canonical)].join("\n");
+  const kDate = hmac("AWS4" + S3.secret, date), kReg = hmac(kDate, S3.region),
+        kSrv = hmac(kReg, "s3"), kSig = hmac(kSrv, "aws4_request");
+  headers.authorization = `AWS4-HMAC-SHA256 Credential=${S3.key}/${scope}, SignedHeaders=${signed}, Signature=${crypto.createHmac("sha256", kSig).update(sts).digest("hex")}`;
+  return headers;
+}
+function s3Request(method, key, extraHeaders) {
+  const target = s3Target(key);
+  const headers = s3Sign(method, target, extraHeaders);
+  const mod = target.protocol === "http:" ? http : https;
+  return mod.request({ method, host: target.host.split(":")[0], port: target.host.split(":")[1] || (target.protocol === "http:" ? 80 : 443), path: target.path, headers });
+}
 
 const rnd = (n = 16) => crypto.randomBytes(n).toString("base64url");
 const now = () => new Date();
@@ -140,7 +196,7 @@ const on = (method, re, fn) => routes.push({ method, re, fn });
 
 on("GET", /^\/api\/health$/, async (ctx) => {
   await ctx.db.query("select 1");
-  send(ctx.res, 200, { ok: true, time: now().toISOString() });
+  send(ctx.res, 200, { ok: true, time: now().toISOString(), uploads: S3.ready });
 });
 
 /* создание заказа из квиза */
@@ -175,8 +231,10 @@ on("PATCH", /^\/api\/orders\/([\w-]{10,64})$/, async ({ req, res, db, m }) => {
   const o = await loadOrder(db, id);
   if (!o) return fail(res, 404, "not_found");
   const b = await readBody(req, MAX_BODY);
-  const set = [], val = [id];
-  const put = (col, v) => { val.push(v); set.push(`${col}=$${val.length}`); };
+  // одна колонка — одно присвоение: клиент присылает и access, и revoked, а Postgres
+  // не принимает повторы в одном update
+  const cols = new Map();
+  const put = (col, v) => cols.set(col, v);
 
   if (b.title !== undefined) put("title", str(b.title, 120) || o.title);
   if (b.tier !== undefined) put("tier", str(b.tier, 40) || o.tier);
@@ -202,7 +260,9 @@ on("PATCH", /^\/api\/orders\/([\w-]{10,64})$/, async ({ req, res, db, m }) => {
   if (b.revoked !== undefined) put("revoked", !!b.revoked);
   if (b.edition !== undefined) put("edition", Math.max(1, Math.min(99, int(b.edition, 1))));
 
-  if (set.length) {
+  if (cols.size) {
+    const val = [id], set = [];
+    for (const [col, v] of cols) { val.push(v); set.push(`${col}=$${val.length}`); }
     set.push("updated_at=now()");
     await db.query(`update orders set ${set.join(",")} where id=$1`, val);
   }
@@ -350,6 +410,98 @@ on("POST", /^\/api\/i\/([\w-]{6,64})\/items$/, async ({ req, res, db, m }) => {
   const { rows } = await db.query("update invites set items=items+$2, status='contrib' where id=$1 returning items", [me.id, n]);
   await logAct(db, o.id, me.name, "участник добавил материалы", me.name + ": " + n);
   send(res, 200, { items: rows[0].items });
+});
+
+/* ---------- оригиналы снимков ---------- */
+const safeName = s => String(s || "photo.jpg").replace(/[^\w.\-]+/g, "_").slice(-80);
+
+/* участник заливает кадр: тело запроса — сам файл, метаданные в query */
+on("POST", /^\/api\/i\/([\w-]{6,64})\/file$/, async ({ req, res, db, m, url }) => {
+  if (!S3.ready) return fail(res, 503, "uploads_off");
+  const found = await byToken(db, m[1]);
+  if (!found || !found.me) return fail(res, 404, "not_found");
+  const o = found.order, me = found.me;
+  if (!o.access.collect) return fail(res, 403, "collect_closed");
+
+  const size = +(req.headers["content-length"] || 0);
+  if (size > MAX_FILE) return fail(res, 413, "too_large", { limit: MAX_FILE });
+  const mime = str(url.searchParams.get("mime"), 80) || "image/jpeg";
+  if (!/^image\//.test(mime)) return fail(res, 415, "not_image");
+  const mine = +(await db.query("select count(*)::int c from files where invite_id=$1", [me.id])).rows[0].c;
+  if (mine >= FILES_PER_PERSON) return fail(res, 409, "too_many_files", { limit: FILES_PER_PERSON });
+
+  const name = safeName(url.searchParams.get("name"));
+  const id = rnd(10);
+  const key = `orders/${o.pid}/${me.id}/${id}-${name}`;
+  const taken = +url.searchParams.get("taken") || null;
+  const w = int(url.searchParams.get("w")), h = int(url.searchParams.get("h"));
+
+  const up = s3Request("PUT", key, { "content-type": mime, "content-length": String(size) });
+  const done = new Promise((resolve, reject) => {
+    up.on("response", r => {
+      const chunks = [];
+      r.on("data", c => chunks.push(c));
+      r.on("end", () => (r.statusCode >= 200 && r.statusCode < 300)
+        ? resolve()
+        : reject(new Error("s3 " + r.statusCode + " " + Buffer.concat(chunks).toString("utf8").slice(0, 300))));
+    });
+    up.on("error", reject);
+  });
+  req.pipe(up);
+  try { await done; }
+  catch (e) { console.error("[s3]", e.message); return fail(res, 502, "storage"); }
+
+  await db.query(
+    `insert into files(id,order_id,invite_id,okey,name,mime,size,taken_at,w,h)
+     values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [id, o.id, me.id, key, name, mime, size, taken ? new Date(taken) : null, w || null, h || null]);
+  const items = (await db.query("update invites set items=items+1, status='contrib' where id=$1 returning items", [me.id])).rows[0].items;
+  send(res, 201, { id, items });
+});
+
+/* участник закончил пачку — одна строка в журнале вместо строки на каждый кадр */
+on("POST", /^\/api\/i\/([\w-]{6,64})\/uploaded$/, async ({ req, res, db, m }) => {
+  const found = await byToken(db, m[1]);
+  if (!found || !found.me) return fail(res, 404, "not_found");
+  const b = await readBody(req, MAX_BODY);
+  const n = Math.max(0, Math.min(2000, int(b.n, 0)));
+  if (n) await logAct(db, found.order.id, found.me.name, "участник добавил материалы", found.me.name + ": " + n);
+  send(res, 200, { ok: true });
+});
+
+/* владелец забирает кадры участников: список и сами файлы — только через нас */
+on("GET", /^\/api\/orders\/([\w-]{10,64})\/files$/, async ({ res, db, m }) => {
+  const id = m[1];
+  if (!await loadOrder(db, id)) return fail(res, 404, "not_found");
+  const { rows } = await db.query(
+    `select f.id, f.name, f.mime, f.size, f.taken_at, f.w, f.h, f.created_at, i.name who
+       from files f left join invites i on i.id=f.invite_id
+      where f.order_id=$1 order by f.created_at`, [id]);
+  send(res, 200, {
+    files: rows.map(r => ({
+      id: r.id, name: r.name, mime: r.mime, size: +r.size,
+      taken: r.taken_at ? +new Date(r.taken_at) : 0, w: r.w, h: r.h,
+      who: r.who || "участник", url: `/api/orders/${id}/files/${r.id}/raw`
+    }))
+  });
+});
+
+on("GET", /^\/api\/orders\/([\w-]{10,64})\/files\/([\w-]{6,32})\/raw$/, async ({ res, db, m }) => {
+  if (!S3.ready) return fail(res, 503, "uploads_off");
+  const { rows } = await db.query("select okey, mime from files where id=$1 and order_id=$2", [m[2], m[1]]);
+  if (!rows[0]) return fail(res, 404, "not_found");
+  const rq = s3Request("GET", rows[0].okey);
+  rq.on("response", r => {
+    if (r.statusCode !== 200) { r.resume(); return fail(res, 502, "storage"); }
+    res.writeHead(200, {
+      "content-type": rows[0].mime,
+      "content-length": r.headers["content-length"] || "",
+      "cache-control": "private, max-age=86400"
+    });
+    r.pipe(res);
+  });
+  rq.on("error", () => fail(res, 502, "storage"));
+  rq.end();
 });
 
 /* ------------------------------------------------ сервер */
