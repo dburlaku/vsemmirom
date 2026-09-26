@@ -591,11 +591,11 @@ h1,h2,h3{text-wrap:balance}
       <div class="proj" id="projCard" hidden></div>
       <div class="drop" id="drop">
         <div class="cta" style="justify-content:center">
-          <button class="btn primary" id="pickDirBtn" type="button">Выбрать папку</button>
-          <label class="btn">Выбрать файлы<input id="pickFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+          <button class="btn primary" id="addPhotos" type="button">Добавить фото</button>
+          <label hidden><input id="pickFiles" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple hidden></label>
           <input id="pickDir" type="file" webkitdirectory directory multiple hidden>
         </div>
-        <p class="big-i" id="pickHint">JPEG, PNG, WebP. Файлы HEIC с айфона браузер не открывает — их придётся сначала сохранить в JPEG.</p>
+        <p class="big-i" id="pickHint">JPEG, PNG, WebP и HEIC с айфона. Снимки читаются прямо здесь и никуда не уходят.</p>
         <p class="note" id="dropCount">Пока ничего не выбрано</p>
       </div>
 
@@ -603,9 +603,10 @@ h1,h2,h3{text-wrap:balance}
         <div class="up-head">
           <div><b id="upCount">0</b> <span id="upOf"></span></div>
           <div class="up-actions">
-            <label class="btn ghost">Добавить ещё<input id="pickMore2" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
-            <button class="btn ghost" id="pickDirBtn2" type="button">Другая папка</button>
+            <button class="btn ghost" id="addPhotos2" type="button">Добавить фото</button>
             <input id="pickDir2" type="file" webkitdirectory directory multiple hidden>
+            <label hidden><input id="pickMore2" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple hidden></label>
+            <button class="btn ghost" id="upStop" hidden>Остановить</button>
             <button class="btn ghost" id="upClear">Очистить</button>
           </div>
         </div>
@@ -784,7 +785,8 @@ function qc(){
   catch(_){ return Object.assign({},QC_DEFAULT); }
 }
 /* Границы тарифов по объёму (§3.1, непрерывные) */
-const TIERS=[{name:"Момент",min:24,max:40},{name:"Глава",min:41,max:80},{name:"Жизнь",min:81,max:200}];
+const TIERS=[{name:"Момент",min:24,max:40},{name:"Глава",min:44,max:80},{name:"Жизнь",min:84,max:120}];
+const TIER_PRICE={"Момент":4990,"Глава":6690,"Жизнь":10490,"С редактором":19900};
 function tierFor(pages){ return (TIERS.find(t=>pages>=t.min&&pages<=t.max)||TIERS[TIERS.length-1]).name; }
 
 const CAP={full:1,one:1,two:2,trio:3,quad:4};
@@ -1158,6 +1160,7 @@ function upCounts(){
   const n=state.photos.length;
   $("upCount").textContent=n;
   $("upOf").textContent=n?(n===1?"снимок готов":n<5?"снимка готово":"снимков готово"):"снимков";
+  if($("upStop")) $("upStop").hidden=!intakeBusy;
   const heicPhase=intakeBusy&&heicLeft>0&&n>=8;
   $("go-scan").disabled=(intakeBusy&&!heicPhase)||!n;
   $("go-scan").textContent=heicPhase?("Собрать из готовых ("+n+")")
@@ -1286,6 +1289,7 @@ async function intake(list){
     if(done%3===0) upCounts();
   };
   for(const f of files){
+    if(intakeStop) break;
     if(known.has(f.name+"|"+f.size)){ step(); continue; }
     await addPhoto(f,known);
     step();
@@ -1297,7 +1301,7 @@ async function intake(list){
     $("upHeic").hidden=false;
     $("upHeic").textContent="Открываю HEIC: 0 из "+heics.length;
     await heicQueue(heics,
-      async jpg=>{ await addPhoto(jpg,known); },
+      async jpg=>{ if(!intakeStop) await addPhoto(jpg,known); },
       (d,t)=>{
         heicLeft=t-d;
         $("upHeic").textContent="Открываю HEIC: "+d+" из "+t+
@@ -1359,15 +1363,56 @@ async function chooseFolder(){
   const files=[];
   try{ await walkDir(dir,files); }catch(_){}
   if(!files.length){ toast("В папке не нашлось изображений"); return; }
+  // ред. 7, дефект 11: новая папка прерывает текущую обработку и обнуляет счётчики
+  if(intakeBusy||state.photos.length){
+    await stopIntake();
+    clearPhotos();
+    toast("Взял новую папку — счётчики обнулены");
+  }
   state.dirHandle=dir;
   if(state.draftId) idbPut(state.draftId,dir);
   intake(files);
 }
-$("pickDirBtn").addEventListener("click",chooseFolder);
-if(FS_OK) $("pickHint").textContent=
-  "JPEG, PNG, WebP. Браузер один раз спросит разрешение на чтение выбранной папки — это его штатная проверка, файлы остаются на месте. HEIC с айфона браузер не открывает.";
-else $("pickHint").textContent=
-  "JPEG, PNG, WebP. Ваш браузер попросит подтвердить доступ ко всем файлам папки — иначе он папки не отдаёт. Ничего никуда не отправляется. HEIC с айфона браузер не открывает.";
+/* ред. 7, дефект 12: обработку большой папки можно остановить */
+let intakeStop=false;
+function stopIntake(){
+  if(!intakeBusy) return Promise.resolve();
+  intakeStop=true;
+  return new Promise(res=>{
+    const t=setInterval(()=>{ if(!intakeBusy){ clearInterval(t); intakeStop=false; res(); } },80);
+    setTimeout(()=>{ clearInterval(t); intakeStop=false; res(); },6000);
+  });
+}
+function clearPhotos(){
+  state.photos.forEach(p=>{ try{ URL.revokeObjectURL(p.url); }catch(_){} });
+  state.photos=[]; state.byId=new Map(); skippedHeic=0; skippedBad=0;
+  $("upGrid").innerHTML=""; $("upBar").style.width="0%";
+  upSkipText(); upCounts();
+}
+/* §5.6: одна кнопка «Добавить фото», источник выбирается в меню (ред. 7, дефект 14) */
+const MOBILE=matchMedia("(max-width:760px)").matches||/iPhone|iPad|Android/i.test(navigator.userAgent);
+function addPhotosMenu(){
+  const el=document.createElement("div"); el.className="modal";
+  el.innerHTML='<div class="box"><h3>Откуда взять фото</h3>'+
+    '<div class="pt-grid">'+
+      (FS_OK?'<button class="pt" data-k="dir"><b>Подключить папку</b>'+
+        '<em>браузер спросит разрешение один раз, файлы остаются на месте</em></button>':
+        '<button class="pt" data-k="dir"><b>Подключить папку</b><em>вложенные папки тоже прочитаются</em></button>')+
+      '<button class="pt" data-k="files"><b>'+(MOBILE?"Загрузить из галереи":"Загрузить фото")+'</b>'+
+        '<em>'+(MOBILE?"снимки из галереи телефона":"выбрать файлы по одному или пачкой")+'</em></button>'+
+    '</div><p class="note">JPEG, PNG, WebP и HEIC. Снимки читаются в этой вкладке и никуда не уходят.</p>'+
+    '<div class="foot sticky" style="margin-top:12px"><button class="btn ghost" id="apNo">Отмена</button></div></div>';
+  document.body.appendChild(el);
+  const kill=()=>el.remove();
+  el.addEventListener("click",e=>{ if(e.target===el) kill(); });
+  $("apNo").addEventListener("click",kill);
+  el.querySelectorAll(".pt").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.k; kill();
+    if(k==="dir") chooseFolder(); else $("pickFiles").click();
+  }));
+}
+$("addPhotos").addEventListener("click",addPhotosMenu);
+$("addPhotos2").addEventListener("click",addPhotosMenu);
 
 /* хранилище разрешений на папку — чтобы черновик открывался без нового выбора */
 function idb(){
@@ -1392,13 +1437,21 @@ async function idbGet(k){
 $("pickDir").addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";intake(f);});
 $("pickFiles").addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";intake(f);});
 $("pickDir2").addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";intake(f);});
-$("pickDirBtn2").addEventListener("click",chooseFolder);
 $("pickMore2").addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";intake(f);});
-$("upClear").addEventListener("click",()=>{
-  state.photos.forEach(p=>{ try{ URL.revokeObjectURL(p.url); }catch(_){} });
-  state.photos=[]; state.byId=new Map(); skippedHeic=0; skippedBad=0;
-  $("upGrid").innerHTML=""; $("upBar").style.width="0%"; $("uploader").hidden=true;
-  upSkipText(); upCounts();
+$("upClear").addEventListener("click",async()=>{
+  await stopIntake();
+  clearPhotos();
+  $("uploader").hidden=true;
+});
+/* остановка с выбором: оставить прочитанное или отменить выбор целиком */
+$("upStop").addEventListener("click",()=>{
+  confirmBox({title:"Остановить обработку?",
+    text:"Прочитано "+state.photos.length+" кадров. Можно оставить их и собрать книгу из прочитанного "+
+      "или отменить выбор целиком и начать с другой папки.",
+    ok:"Оставить обработанные",
+    go:async()=>{ await stopIntake(); toast("Остановил: в наборе "+state.photos.length+" кадров"); },
+    alt:{label:"Отменить выбор", go:async()=>{ await stopIntake(); clearPhotos();
+      $("uploader").hidden=true; toast("Выбор отменён"); }}});
 });
 const drop=$("drop");
 ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hot");}));
@@ -2117,7 +2170,9 @@ function assemble(){
 
     const slots=assignByAspect(kind,picked);
     const day=dayKey(picked[0].date);
-    const head=(day!=="0"&&day!==prevDay)?dayLabel(picked[0].date):yearLabel(slots);
+    // кадры без даты идут своей группой, подпись года у них пустая (приёмка ред. 7)
+    const head=day==="0" ? (prevDay==="0"?"":"Без даты")
+             : (day!==prevDay ? dayLabel(picked[0].date) : yearLabel(slots));
     prevDay=day;
     pages.push({type:"photos",layout:kind,slots,year:head,focal:[]});
     hist.unshift(kind); hist.length=Math.min(hist.length,3);
@@ -2163,8 +2218,9 @@ function todoNote(){
   const fits=slotCount(), over=state.overflow||0;
   const needVol=over>=12&&over>fits*0.5&&!state.volDecided;
   const items=[];
-  items.push({key:"cover", done:!!state.coverOk, label:"выбрать обложку",
-              act:state.coverOk?null:{id:"tdCover",text:"Выбрать"}});
+  items.push({key:"cover", done:!!state.coverOk,
+              label:state.coverOk?"обложка подтверждена":"подтвердить обложку в разделе «Обложка»",
+              act:state.coverOk?null:{id:"tdCover",text:"Открыть"}});
   if(state.pending) items.push({key:"add", done:false,
               label:"встроить "+state.pending+" новых кадров",
               act:{id:"tdEmbed",text:"Встроить"}});
@@ -2179,18 +2235,25 @@ function todoNote(){
   if(min&&state.pages.length<min) items.push({key:"min", done:false,
               label:"книга короче тарифа: "+state.pages.length+" из "+min,
               act:{id:"tdMin",text:"Решить"}});
+  // «Позвать родных» живёт в шапке: здесь только строка без своей кнопки (§5.6)
   if(state.order) items.push({key:"inv", done:(state.order.invites||[]).some(p=>p.status!=="draft"&&p.status!=="removed"),
-              label:"позвать родных",
-              act:{id:"tdInv",text:"Позвать"}});
+              label:"позвать родных — кнопка в шапке", act:null});
   const left=items.filter(i=>!i.done).length;
   el.hidden=false;
   el.innerHTML='<b>'+(left?"До печати осталось:":"К печати всё готово:")+'</b>'+
     items.map((i,k)=>'<span class="item'+(i.done?" done":"")+'">'+esc(i.label)+
       (i.act&&!i.done?' <button type="button" id="'+i.act.id+'">'+i.act.text+'</button>':'')+'</span>'+
       (k<items.length-1?'<span class="sep">·</span>':'')).join("");
-  if($("tdCover")) $("tdCover").addEventListener("click",coverDialog);
+  // чеклист ведёт в раздел «Обложка», а выбор кадра живёт там (§5.6, ред. 7)
+  if($("tdCover")) $("tdCover").addEventListener("click",()=>{
+    const i=state.pages.findIndex(p=>p.type==="cover");
+    state.cur=i>=0?i:0; state.selSlot=-1;
+    mtab&&mtab("edit");
+    inspector(); render(); updHead();
+    toast("Раздел «Обложка»: кнопка «Выбрать другую» под кадром");
+  });
   if($("tdEmbed")) $("tdEmbed").addEventListener("click",embedPending);
-  if($("tdInv")) $("tdInv").addEventListener("click",()=>$("edInvite").click());
+
   if($("tdVol")) $("tdVol").addEventListener("click",volumeDialog);
   if($("tdMin")) $("tdMin").addEventListener("click",volumeDialog);
   if($("tdBlank")) $("tdBlank").addEventListener("click",()=>{
@@ -2230,11 +2293,18 @@ function volumeScreen(fromChecklist){
     $("volTitle").textContent="Кадров больше, чем вмещает объём";
     $("volSub").textContent="В книге "+fits+" кадров, в лотке ещё "+over+
       ". Уплотнять вёрстку не буду — выберите, как поступить.";
-    opts.push({k:"more", t:"Увеличить объём до "+plural(need,"страницы","страниц","страниц"),
-      d:"Тариф «"+tierFor(need)+"», войдёт почти всё отобранное"});
-    opts.push({k:"best", t:"Оставить лучшие",
-      d:"Книга останется на "+plural(pages,"странице","страницах","страницах")+", остальные кадры ждут в лотке"});
-    opts.push({k:"vol",  t:"Разделить на тома", d:"Связанные проекты с общим оформлением и нумерацией"});
+    // §3 «Честная цена»: по умолчанию бесплатный вариант, платные — с ценой на кнопке
+    const cur=state.order?state.order.tier:tierFor(pages);
+    const bigger=TIERS.find(t=>t.max>=Math.min(PAGE_MAX,need)&&t.name!==cur)||TIERS[TIERS.length-1];
+    const up=state.order?upgradeCost(cur,bigger.name):tierPrice(bigger.name);
+    opts.push({k:"best", t:"Оставить лучшие кадры · бесплатно",
+      d:"Книга останется на "+plural(pages,"странице","страницах","страницах")+
+        ", лучшие кадры уже в ней, остальные ждут в лотке"});
+    if(bigger.name!==cur)
+      opts.push({k:"more", t:"Тариф «"+bigger.name+"», до "+bigger.max+" страниц"+(up?" · +"+RUB(up):""),
+        d:"Войдёт больше кадров: объём вырастет до "+Math.min(bigger.max,need)+" страниц"});
+    opts.push({k:"vol",  t:"Разделить на 2 тома · +"+RUB(tierPrice(cur)),
+      d:"Второй том — отдельный проект той же серии, оплачивается по своему тарифу"});
   }
   $("volOpts").innerHTML=opts.map(o=>'<button class="vol-opt" data-k="'+o.k+'"><span>'+
     '<b>'+esc(o.t)+'</b><em>'+esc(o.d)+'</em></span></button>').join("");
@@ -2242,8 +2312,15 @@ function volumeScreen(fromChecklist){
   $("volOpts").querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.k;
     state.volDecided=true;
-    if(k==="more"){ state.target=normPages(need); $("npages").value=state.target; $("pgLabel").textContent=state.target;
-      assemble(); toast("Объём книги — "+state.target+" страниц"); }
+    if(k==="more"){
+      const cur2=state.order?state.order.tier:tierFor(state.pages.length);
+      const big=TIERS.find(t=>t.max>=Math.min(PAGE_MAX,need)&&t.name!==cur2)||TIERS[TIERS.length-1];
+      state.target=normPages(Math.min(big.max,need));
+      $("npages").value=state.target; $("pgLabel").textContent=state.target;
+      if(state.order){ state.order.tier=big.name; saveOrder(state.order); orderBar(); projCard(); }
+      assemble();
+      toast("Тариф «"+big.name+"», объём "+state.target+" страниц");
+    }
     if(k==="vol"){ show("s-editor"); volumesDialog(); return; }
     if(k==="add"){ show("s-upload"); return; }
     if(k==="down"&&state.order){
@@ -2318,7 +2395,11 @@ function inspector(){
   if(!p){ box.innerHTML=""; return; }
   let h="";
   if(p.type==="cover"){
-    h+='<h3>Обложка</h3>'+rowHtml("Название",'<input type="text" data-k="title" value="'+esc(p.title)+'">')+
+    h+='<h3>Обложка</h3>'+
+       (state.coverOk?'<p class="note">Обложка подтверждена.</p>'
+                     :'<p class="note">Сейчас на обложке черновик: подтвердите кадр, иначе книга не уйдёт в печать.</p>')+
+       '<button class="btn" id="inspCover" style="width:100%;margin-bottom:10px">Выбрать другую</button>'+
+       rowHtml("Название",'<input type="text" data-k="title" value="'+esc(p.title)+'">')+
        rowHtml("Подзаголовок",'<input type="text" data-k="years" value="'+esc(p.years)+'">')+slotList(p);
   } else if(p.type==="blank"){
     h+='<h3>Пустая страница</h3><p class="note">Держит кратность объёма. Нажмите «Тип», '+
@@ -2347,6 +2428,7 @@ function inspector(){
   }
   box.innerHTML=h;
   if($("inspAI")) $("inspAI").addEventListener("click",()=>aiDialog(state.cur));
+  if($("inspCover")) $("inspCover").addEventListener("click",coverDialog);
   box.querySelectorAll("[data-k]").forEach(el=>el.addEventListener("input",()=>{
     p[el.dataset.k]=el.value; p.touched=true;
     if(p.type==="cover"&&el.dataset.k==="title"){ state.title=el.value; setBrand(el.value); }
@@ -2523,6 +2605,19 @@ function pagesMinus(){
       toast("Объём книги — "+state.pages.length+" страниц"); }});
 }
 function pagesPlus(){
+  const max=state.order?tierMax(state.order.tier):PAGE_MAX;
+  if(state.pages.length+PAGE_STEP>max){
+    const cur=state.order?state.order.tier:tierFor(state.pages.length);
+    const big=TIERS.find(t=>t.min>max)||null;
+    confirmBox({title:"Это верхняя граница тарифа",
+      text:"В тариф «"+cur+"» входит до "+max+" страниц. Дальше — только на большем тарифе"+
+        (big?": «"+big.name+"», до "+big.max+" страниц, доплата "+RUB(upgradeCost(cur,big.name)):"")+".",
+      ok:big?"Перейти на «"+big.name+"» · +"+RUB(upgradeCost(cur,big.name)):"Понятно",
+      go:()=>{ if(!big||!state.order) return;
+        state.order.tier=big.name; saveOrder(state.order); orderBar(); projCard(); todoNote();
+        toast("Тариф «"+big.name+"» — теперь можно до "+big.max+" страниц"); }});
+    return;
+  }
   const free=groups().free.length;
   snapshot("перед увеличением объёма");
   for(let i=0;i<PAGE_STEP;i++){
@@ -2614,8 +2709,15 @@ function volumesDialog(){
   el.addEventListener("click",e=>{ if(e.target===el) draw&&null; });
   draw();
 }
-function tierPrice(name){
-  return {"Момент":4990,"Глава":6690,"Жизнь":10490,"С редактором":19900}[name]||0;
+function tierPrice(name){ return TIER_PRICE[name]||0; }
+/* §3: верхняя граница объёма у тарифа — чтобы доплата не всплывала после загрузки */
+function tierMax(name){
+  const t=TIERS.find(x=>x.name===name);
+  return t?t.max:PAGE_MAX;
+}
+/* доплата за переход на больший тариф — показывается прямо на кнопке */
+function upgradeCost(from,to){
+  return Math.max(0,(TIER_PRICE[to]||0)-(TIER_PRICE[from]||0));
 }
 function fmtRub(n){ return n?n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽":"—"; }
 /* подтверждение создаёт связанные проекты: первый том остаётся здесь, остальные ждут оплаты */
@@ -3139,6 +3241,7 @@ function embedPending(){
 
 /* =============================== заказ как сущность (Приложение А ред. 2, §2–§5) */
 const TIER_START={"Момент":24,"Глава":48,"Жизнь":84,"С редактором":84};
+const RUB=n=>n?n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽":"";
 const PAGE_STEP=4, PAGE_MIN=24, PAGE_MAX=200;
 /* объём всегда кратен 4 и не меньше 24 (§5.1) */
 function normPages(n){
@@ -3265,7 +3368,11 @@ function applyRole(){
   const saved=$("edSaved"); if(saved) saved.hidden=!state.paid||guest;
   hide("edInvite",guest||!o);
   const inv=$("edInvite");
-  if(inv&&o){ inv.textContent=o.access.collect?"Позвать родных":"Позвать родных (сбор закрыт)"; }
+  if(inv&&o){                        // §5.6: название не меняется, при закрытом сборе кнопка неактивна
+    inv.textContent="Позвать родных";
+    inv.disabled=!o.access.collect;
+    inv.title=o.access.collect?"":"Сбор закрыт — откройте его рядом со статусом";
+  }
   // разрешение печати определяется тарифом, а не переключателем (§4.4)
   const dpi=$("edDpi"); if(dpi) dpi.value=state.paid?"300":"150";
   const fmt=$("edFmt"); if(fmt) fmt.disabled=guest;
@@ -3287,7 +3394,7 @@ function applyRole(){
 }
 function tierRange(t){
   const r=TIERS.find(x=>x.name===t);
-  return r?(r.max>=200?"от "+r.min:r.min+"–"+r.max)+" стр.":"";
+  return r?r.min+"–"+r.max+" стр.":"";
 }
 function projCard(){
   const o=state.order, box=$("projCard");

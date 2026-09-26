@@ -160,8 +160,8 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
   <div class="demo">Демо-лендинг сервиса. Цены по ТЗ ред. 5; оплата — заглушка, заявка сохраняется только на этой странице.</div>
   <header class="top">
     <div class="logo">Всем миром <small>книга от всех</small></div>
-    <nav class="links"><a href="#how">Как это работает</a><a href="#quiz">Подобрать книгу</a><a href="#prices">Цены</a><a href="#faq">Вопросы</a></nav>
-    <a class="btn" href="#quiz">Собрать книгу</a>
+    <nav class="links"><a href="#how">Как это работает</a><a href="quiz.html">Подобрать книгу</a><a href="#prices">Цены</a><a href="#faq">Вопросы</a></nav>
+    <a class="btn" href="quiz.html">Собрать книгу</a>
   </header>
 
   <div class="hero">
@@ -176,7 +176,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
         <button class="chip" data-occ="grad" aria-pressed="false">Выпускной</button>
       </div>
       <div class="cta-row">
-        <a class="btn" href="#quiz">Подобрать книгу за минуту</a>
+        <a class="btn" href="quiz.html">Подобрать книгу за минуту</a>
         <span class="hint">6 вопросов, цена сразу</span>
       </div>
     </div>
@@ -211,7 +211,7 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
     <h2>Вы начинаете, остальное делаем вместе</h2>
     <div class="steps">
       <div class="step"><h3>Ответьте на 6 вопросов</h3><p>Повод, дата, сколько фото, кто участвует. Покажем образец книги и точную цену.</p></div>
-      <div class="step"><h3>Позовите родных</h3><p>Отправьте ссылку в семейный чат. Регистрация не нужна: имя и фото, этого достаточно.</p><a class="btn ghost" href="#quiz" style="justify-self:start;padding:8px 14px;font-size:14px">Собрать книгу и позвать</a></div>
+      <div class="step"><h3>Позовите родных</h3><p>Отправьте ссылку в семейный чат. Регистрация не нужна: имя и фото, этого достаточно.</p><a class="btn ghost" href="quiz.html" style="justify-self:start;padding:8px 14px;font-size:14px">Собрать книгу и позвать</a></div>
       <div class="step"><h3>Книга соберётся сама</h3><p>Уберём дубли и смазанные кадры, найдём главного героя, разложим по страницам и годам. Тексты подскажем.</p></div>
       <div class="step"><h3>Печать к дате</h3><p>Проверьте макет и отправьте в печать. Родные получат ссылку на книгу и смогут заказать свой экземпляр со скидкой 20%.</p></div>
     </div>
@@ -243,8 +243,10 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
   <section id="quiz">
     <p class="eyebrow">Подбор книги</p>
     <h2>Узнайте формат и цену за минуту</h2>
-    <p class="hint" id="prevOrder" hidden style="margin:0 0 12px"></p>
-    <div class="quiz" id="quizBox" aria-live="polite"></div>
+    <p class="lead">Шесть вопросов: повод, дата, доставка, сколько фото, кто пишет тексты и кто участвует.
+       Цены покажем на шаге подбора.</p>
+    <p class="hint" id="prevOrder" hidden style="margin:12px 0 0"></p>
+    <p style="margin-top:18px"><a class="btn" href="quiz.html">Собрать книгу</a></p>
   </section>
 
   <section id="prices">
@@ -257,9 +259,9 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
           <tr><td><b>Свободный</b><br><span class="hint">собрать в браузере</span></td><td class="num">0 ₽</td><td>от 24</td><td>Только вы, фото остаются на компьютере. Ссылка на книгу 30 дней</td><td>PDF 150 dpi с меткой</td></tr>
           <tr><td><b>Альбом</b><br><span class="hint">без печати</span></td><td class="num">990 ₽</td><td>от 24</td><td>До 20 участников, оригиналы в облаке 12 месяцев, ссылка бессрочно</td><td>PDF 150 dpi</td></tr>
           <tr class="hl"><td><b>Момент</b></td><td class="num">4 990 ₽</td><td>24–40</td><td>Всё из «Альбома» + печатная книга</td><td>Файл для печати включён</td></tr>
-          <tr><td><b>Глава</b></td><td class="num">6 690 ₽</td><td>41–80</td><td>Всё из «Альбома» + печатная книга</td><td>Файл для печати включён</td></tr>
-          <tr><td><b>Жизнь</b></td><td class="num">10 490 ₽</td><td>от 81</td><td>Всё из «Альбома» + печатная книга</td><td>Файл для печати включён</td></tr>
-          <tr><td><b>С редактором</b></td><td class="num">19 900 ₽</td><td>от 81</td><td>Всё из «Жизни» + редактор 3–4 часа</td><td>Файл для печати включён</td></tr>
+          <tr><td><b>Глава</b></td><td class="num">6 690 ₽</td><td>44–80</td><td>Всё из «Альбома» + печатная книга</td><td>Файл для печати включён</td></tr>
+          <tr><td><b>Жизнь</b></td><td class="num">10 490 ₽</td><td>84–120</td><td>Всё из «Альбома» + печатная книга</td><td>Файл для печати включён</td></tr>
+          <tr><td><b>С редактором</b></td><td class="num">19 900 ₽</td><td>84–120</td><td>Всё из «Жизни» + редактор 3–4 часа</td><td>Файл для печати включён</td></tr>
         </tbody>
       </table>
     </div>
@@ -295,211 +297,19 @@ footer{padding-block:36px;color:var(--muted);font-size:14px;border-top:1px solid
 </div>
 
 <script>
-(function(){
-const OCC={
-  mom:{eb:"Юбилей мамы или папы",t:'Книга к маминому юбилею, <em>которую соберёт вся семья</em>',l:"Вы зовёте родных по ссылке. Каждый добавит свои фото и пару слов. Сервис сам отберёт лучшие кадры, сверстает страницы и поможет с текстами. К дате приедет печатная книга.",cl:"Мама, 1981. Первое лето в Ялте — <b>Лена</b>",cr:"Дача, внуки и тот самый пирог — <b>Саша и Катя</b>",st:"«Мам, спасибо за всё. Мы тебя очень любим» — Дима",who:"8 родных участвуют · до даты 19 дней",fill:"15 из 24 страниц заполнено"},
-  wedding:{eb:"Годовщина свадьбы",t:'40 лет вместе. <em>Их история глазами детей и внуков</em>',l:"Свадебные фото из альбома бабушки, первые квартиры, дети, внуки. Каждый в семье добавит свою главу, а сервис соберёт её в одну книгу к рубиновой, золотой или любой другой дате.",cl:"Свадьба, 1986. Платье шила сама — <b>Наташа</b>",cr:"Все вместе на даче, 2019 — <b>внуки</b>",st:"«Вы научили нас любить» — дети и внуки",who:"12 родных участвуют · до даты 34 дня",fill:"31 из 48 страниц заполнено"},
-  work:{eb:"Проводы и юбилей коллеги",t:'Книга от всего отдела <em>вместо очередного сертификата</em>',l:"Совместные фото с корпоративов и командировок, пожелания от каждого. Коллеги заполнят свои страницы по ссылке, без регистрации. Удобно, когда в отделе двадцать человек и все заняты.",cl:"Первый проект, 2012 — <b>Андрей</b>",cr:"Выставка в Казани, 2019 — <b>отдел продаж</b>",st:"«Без вас этот отдел не был бы семьёй» — Ира",who:"17 коллег участвуют · до даты 11 дней",fill:"20 из 24 страниц заполнено"},
-  grad:{eb:"Выпускной",t:'Книга класса, <em>где у каждого своя страница</em>',l:"Родители присылают фото со своих телефонов, дети пишут пару строк друг другу. Одна книга на класс, а каждая семья может заказать свой экземпляр со скидкой 20%.",cl:"Первое сентября, 1 «Б» — <b>мама Вари</b>",cr:"Поход, 7 класс — <b>папа Миши</b>",st:"«Спасибо за эти годы!» — 11 «Б»",who:"20 семей участвуют · до даты 42 дня",fill:"38 из 48 страниц заполнено"}
-};
-const $=s=>document.querySelector(s);
-document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
-  document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b));
-  const o=OCC[b.dataset.occ];
-  $("#occEyebrow").textContent=o.eb;$("#occTitle").innerHTML=o.t;$("#occLead").textContent=o.l;
-  $("#capL").innerHTML=o.cl;$("#capR").innerHTML=o.cr;$("#sticky").textContent=o.st;$("#whoText").textContent=o.who;$("#fillText").textContent=o.fill;
-  const m=o.fill.match(/(\d+) из (\d+)/);document.querySelector(".meter i").style.width=(m[1]/m[2]*100)+"%";
-  state.a.occ=b.dataset.occ; render(true);
-}));
-
-/* ===== квиз ===== */
-const TAR={
-  moment:{n:"Момент",p:4990,pg:"24–40 страниц",credit:true},
-  glava:{n:"Глава",p:6690,pg:"41–80 страниц",credit:true},
-  zhizn:{n:"Жизнь",p:10490,pg:"от 81 страницы",credit:true},
-  editor:{n:"С редактором",p:19900,pg:"от 81 страницы + редактор 3–4 ч",credit:false}
-};
-const Q=[
-  {k:"occ",t:"Какой повод?",o:[["mom","Юбилей мамы или папы"],["wedding","Годовщина свадьбы"],["work","Проводы или юбилей коллеги"],["grad","Выпускной"],["other","Другое","день рождения, память, семья"]]},
-  {k:"date",t:"Когда праздник?",type:"date"},
-  {k:"deliv",t:"Куда доставить книгу?",o:[["msk","Москва или Санкт-Петербург"],["ru","Другой город России"],["later","Решу позже"]]},
-  {k:"photos",t:"Сколько фото наберётся у всех вместе?",o:[["s","До 60","хватит на 24–40 страниц"],["m","60–150"],["l","150–300"],["xl","Больше 300"]]},
-  {k:"texts",t:"Кто будет писать тексты?",o:[["self","Мы сами"],["ai","Сами, но с подсказками","сервис предложит варианты"],["editor","Хочу, чтобы помог редактор"]]},
-  {k:"people",t:"Кто будет собирать книгу?",o:[["1","Только я",""],["5","Я и 2–5 родных"],["12","6–20 человек"],["30","Больше 20","класс, большой отдел"]]}
-];
-const PEOPLE_N={"1":1,"5":4,"12":12,"30":20};
-const SKEY="vm:quiz";
-function saveQuiz(){ try{ localStorage.setItem(SKEY,JSON.stringify(state)); }catch(_){}}
-function loadQuiz(){ try{ return JSON.parse(localStorage.getItem(SKEY)||"null"); }catch(_){ return null; } }
-const saved=loadQuiz()||{};
-// прошлый заказ не подставляется в новый подбор: он показывается отдельной строкой
-const prevOrder=saved.order||null;
-// подбор всегда начинается с чистого листа: старые ответы не подставляются (баг-лист §4)
-const state={i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,
-  urgent:false,credit:false,done:false,lead:null,order:null};
-let firstRender=true;
-const fmt=n=>n.toLocaleString("ru-RU").replace(/,/g," ")+" ₽";
-function daysLeft(){if(!state.a.date)return null;const d=new Date(state.a.date+"T12:00:00");return Math.round((d-new Date())/864e5);}
-function recommend(){
-  const a=state.a;
-  if(a.texts==="editor") return {rec:"editor",list:["glava","zhizn","editor"]};
-  const r={s:"moment",m:"glava",l:"zhizn",xl:"zhizn"}[a.photos]||"moment";
-  return {rec:r,list:["moment","glava","zhizn"]};
-}
-function calc(){
-  const t=TAR[state.pick];const base=t.p;const copy=Math.round(base*0.8);
-  const copies=copy*state.copies;const ex=1+state.copies;
-  const urgent=state.urgent?Math.round((base+copies)*0.3):0;
-  const qr=state.qr?600:0,cover=990*Math.min(state.cover,ex),box=490*Math.min(state.box,ex);
-  const credit=state.credit&&t.credit?990:0;
-  return {base,copy,copies,urgent,qr,cover,box,credit,ex,total:base+copies+urgent+qr+cover+box-credit};
-}
-function dots(){return '<div class="dots">'+Q.map((_,j)=>'<i class="'+(j<=state.i?"on":"")+'"></i>').join("")+"</div>";}
-function scrollToQuiz(){
-  const el=document.getElementById("quizBox");
-  if(!el) return;
-  const y=el.getBoundingClientRect().top+window.scrollY-90;
-  window.scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
-}
-function prevLine(){
-  const el=$("#prevOrder"); if(!el) return;
-  if(!prevOrder||!prevOrder.id){ el.hidden=true; return; }
-  el.hidden=false;
-  el.innerHTML='У вас уже есть '+(prevOrder.title||"книга").toLowerCase()+
-    ' — <a href="app.html?order='+prevOrder.id+'">открыть проект</a>';
-}
-// восстановление прокрутки браузером отключено: страница открывается сверху (ТЗ ред. 6, §2)
+/* лендинг презентационный: интерактив живёт на quiz.html (ТЗ ред. 7, §2) */
 try{ if("scrollRestoration" in history) history.scrollRestoration="manual"; }catch(_){}
 window.addEventListener("pageshow",()=>{ if(!location.hash) window.scrollTo(0,0); });
-function render(keepScroll){
-  saveQuiz();
-  prevLine();
-  const box=$("#quizBox");
-  if(!keepScroll&&!firstRender) setTimeout(scrollToQuiz,30);
-  firstRender=false;
-  if(state.done) return renderDone(box);
-  if(state.i<Q.length) return renderQ(box);
-  renderResult(box);
-}
-function renderQ(box){
-  const q=Q[state.i];let h='<div class="qhead"><span class="eyebrow">Вопрос '+(state.i+1)+' из 6</span>'+dots()+'</div><p class="qtitle">'+q.t+'</p>';
-  if(q.type==="date"){
-    const dl=daysLeft();
-    h+='<div class="datebox"><input type="date" id="qdate" value="'+(state.a.date||"")+'" aria-label="Дата праздника">';
-    if(dl!==null) h+='<span class="hint">'+(dl<0?"Дата уже прошла — проверьте год":"До праздника "+dl+" дн."+(dl<14?" Успеем со срочным изготовлением.":""))+'</span>';
-    h+='</div>';
-  } else {
-    h+='<div class="opts">'+q.o.map(o=>'<button class="opt" data-v="'+o[0]+'" aria-pressed="'+(state.a[q.k]===o[0])+'">'+o[1]+(o[2]?"<small>"+o[2]+"</small>":"")+"</button>").join("")+"</div>";
+(function(){
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem("vm:quiz")||"null"); }catch(_){}
+  const o=saved&&saved.order;
+  const el=document.getElementById("prevOrder");
+  if(el&&o&&o.id){
+    el.hidden=false;
+    el.innerHTML="У вас уже есть "+String(o.title||"книга").toLowerCase()+
+      " — <a href=\"app.html?order="+o.id+"\">открыть проект</a>";
   }
-  h+='<div class="qnav"><button class="btn ghost" id="back" '+(state.i===0?"hidden":"")+'>Назад</button><span></span>';
-  if(q.type==="date") h+='<button class="btn" id="next">'+(state.a.date?"Дальше":"Пропустить")+'</button>';
-  h+="</div>";
-  if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html?free=1">Соберите альбом бесплатно в браузере</a></p>';
-  box.innerHTML=h;
-  box.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{state.a[q.k]=b.dataset.v;state.i++;render();});
-  const d=$("#qdate");if(d)d.onchange=()=>{state.a.date=d.value;render(true);};
-  const nx=$("#next");if(nx)nx.onclick=()=>{state.i++;render();};
-  const bk=$("#back");if(bk)bk.onclick=()=>{state.i--;render();};
-}
-function mini(k){const n={moment:4,glava:8,zhizn:12,editor:12}[k];const c=["--ph1","--ph2","--ph3","--ph4","--ph5"];let s="";for(let j=0;j<4;j++)s+='<i style="background:var('+c[(j+n)%5]+')"></i>';return '<div class="mini">'+s+"</div>";}
-function renderResult(box){
-  const r=recommend();if(!state.pick||!r.list.includes(state.pick))state.pick=r.rec;
-  const dl=daysLeft();if(dl!==null&&dl>=0&&dl<14&&state.urgentAuto!==false){state.urgent=true;}
-  const ppl=PEOPLE_N[state.a.people]||1;
-  let h='<div class="qhead"><span class="eyebrow">Ваша книга</span><button class="btn ghost" id="again" style="padding:8px 14px">Изменить ответы</button></div>';
-  h+='<div class="cards">'+r.list.map(k=>{const t=TAR[k];return '<button class="card" data-k="'+k+'" aria-pressed="'+(state.pick===k)+'">'+(k===r.rec?'<span class="rec">Подходит лучше всего</span>':'<span class="rec" style="visibility:hidden">—</span>')+mini(k)+'<h3>'+t.n+'</h3><span class="price">'+fmt(t.p)+'</span>'+(ppl>1?'<span class="per">≈ '+fmt(Math.ceil(t.p/ppl/10)*10)+' с каждого из '+ppl+'</span>':'<span class="per">'+t.pg+'</span>')+'<ul><li>'+t.pg+'</li><li>до 20 участников, облако 12 мес.</li><li>ссылка на книгу для родных</li></ul></button>';}).join("")+"</div>";
-  if(state.a.people==="30") h+='<p class="warn">В проекте до 20 участников. Для класса или большого отдела позовите 20 самых активных: остальные смогут посмотреть книгу по ссылке и заказать свой экземпляр.</p>';
-  const c=calc();
-  h+='<div class="optlist">';
-  h+='<div class="orow"><label><span>Экземпляры для родных<span class="sub">Копия той же книги, −20%: '+fmt(c.copy)+' за штуку</span></span></label><span class="stepper"><button id="cm" aria-label="Меньше">−</button><output>'+state.copies+'</output><button id="cp" aria-label="Больше">+</button></span></div>';
-  h+='<div class="orow"><label><input type="checkbox" id="oqr" '+(state.qr?"checked":"")+'><span>QR-код на видео<span class="sub">Один на книгу, в копиях печатается без доплаты</span></span></label><span class="amt">600 ₽</span></div>';
-  h+='<div class="orow"><label><input type="checkbox" id="ocov" '+(state.cover?"checked":"")+'><span>Премиум-обложка<span class="sub">На каждый экземпляр: '+c.ex+' шт.</span></span></label><span class="amt">'+fmt(990*c.ex)+'</span></div>';
-  h+='<div class="orow"><label><input type="checkbox" id="obox" '+(state.box?"checked":"")+'><span>Подарочная коробка<span class="sub">На каждый экземпляр: '+c.ex+' шт.</span></span></label><span class="amt">'+fmt(490*c.ex)+'</span></div>';
-  h+='<div class="orow"><label><input type="checkbox" id="ourg" '+(state.urgent?"checked":"")+'><span>Срочное изготовление<span class="sub">+30% к книге и копиям'+(dl!==null&&dl>=0&&dl<14?". До праздника "+dl+" дн., рекомендуем":"")+'</span></span></label><span class="amt">+30%</span></div>';
-  if(TAR[state.pick].credit) h+='<div class="orow"><label><input type="checkbox" id="ocr" '+(state.credit?"checked":"")+'><span>У меня уже оплачен «Альбом» по этому проекту<span class="sub">990 ₽ засчитаются в первую книгу</span></span></label><span class="amt">−990 ₽</span></div>';
-  h+="</div>";
-  h+='<div class="total"><div class="line"><span>'+TAR[state.pick].n+'</span><span>'+fmt(c.base)+'</span></div>';
-  if(c.copies)h+='<div class="line"><span>Копии, '+state.copies+' шт. по −20%</span><span>'+fmt(c.copies)+'</span></div>';
-  if(c.urgent)h+='<div class="line"><span>Срочное изготовление</span><span>'+fmt(c.urgent)+'</span></div>';
-  if(c.cover)h+='<div class="line"><span>Премиум-обложки</span><span>'+fmt(c.cover)+'</span></div>';
-  if(c.box)h+='<div class="line"><span>Подарочные коробки</span><span>'+fmt(c.box)+'</span></div>';
-  if(c.qr)h+='<div class="line"><span>QR-код на видео</span><span>'+fmt(c.qr)+'</span></div>';
-  if(c.credit)h+='<div class="line"><span>Учтён оплаченный Альбом</span><span>−'+fmt(c.credit)+'</span></div>';
-  h+='<div class="sum"><span>Итого</span><span>'+fmt(c.total)+'</span></div>';
-  if(ppl>1)h+='<div class="line"><span>Если скинуться на '+ppl+'</span><span>≈ '+fmt(Math.ceil(c.total/ppl/10)*10)+' с человека</span></div>';
-  h+='</div><p class="note">Доставка рассчитывается отдельно.</p>';
-  h+='<div class="qnav"><span></span><button class="btn" id="pay">Оплатить '+fmt(c.total)+'</button></div>';
-  h+='<p class="free">Не готовы платить сейчас? <a href="app.html?free=1">Соберите альбом бесплатно в браузере</a>. Позвать родных и напечатать можно позже.</p>';
-  box.innerHTML=h;
-  box.querySelectorAll(".card").forEach(b=>b.onclick=()=>{state.pick=b.dataset.k;render(true);});
-  $("#again").onclick=()=>{state.i=0;render();};
-  $("#cm").onclick=()=>{state.copies=Math.max(0,state.copies-1);syncEx();render(true);};
-  $("#cp").onclick=()=>{state.copies=Math.min(20,state.copies+1);syncEx();render(true);};
-  $("#oqr").onchange=e=>{state.qr=e.target.checked;render(true);};
-  $("#ocov").onchange=e=>{state.cover=e.target.checked?99:0;render(true);};
-  $("#obox").onchange=e=>{state.box=e.target.checked?99:0;render(true);};
-  $("#ourg").onchange=e=>{state.urgent=e.target.checked;state.urgentAuto=false;render(true);};
-  const cr=$("#ocr");if(cr)cr.onchange=e=>{state.credit=e.target.checked;render(true);};
-  $("#pay").onclick=()=>{state.done=true;render();};
-}
-function syncEx(){}
-function makeOrder(){
-  const c=calc(), t=TAR[state.pick];
-  const id="o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const tok=(Math.random().toString(36)+Math.random().toString(36)).replace(/0\./g,"").slice(0,12);
-  const occMap={mom:"jubilee",wedding:"wedding",work:"other",grad:"family",other:"other"};
-  const o={
-    id:id, createdAt:Date.now(), status:"paid",           // в MVP оплата — заглушка
-    title:{mom:"Книга к юбилею",wedding:"Книга к годовщине",work:"Книга от коллег",grad:"Книга класса"}[state.a.occ]||"Книга историй",
-    occasion:occMap[state.a.occ]||"other",
-    occKey:state.a.occ,
-    date:state.a.date||"", deliv:state.a.deliv||"later",
-    photos:state.a.photos||"", texts:state.a.texts||"", people:PEOPLE_N[state.a.people]||1,
-    tier:t.n, tierPrice:t.p,
-    options:{copies:state.copies, qr:state.qr, cover:!!state.cover, box:!!state.box, urgent:state.urgent, credit:state.credit},
-    totals:{base:c.base, copies:c.copies, urgent:c.urgent, qr:c.qr, cover:c.cover, box:c.box, credit:c.credit, total:c.total},
-    owner:state.lead?{name:state.lead.n,contact:state.lead.c}:null,
-    invites:[], inviteToken:tok,
-    access:{collect:true, invite:true, public:false},
-    stage:"collect", edition:1, extraDays:0, log:[{t:Date.now(),who:"владелец",act:"заказ создан",info:t.n}]
-  };
-  try{ localStorage.setItem("vm:order:"+id, JSON.stringify(o)); }catch(_){}
-  try{ const m=JSON.parse(localStorage.getItem("vm:tokens")||"{}")||{};
-       m[tok]={order:id,invite:null};
-       localStorage.setItem("vm:tokens",JSON.stringify(m)); }catch(_){}
-  return o;
-}
-function renderDone(box){
-  const c=calc();
-  if(!state.lead){
-    box.innerHTML='<p class="eyebrow">Почти готово</p><p class="qtitle">Куда прислать ссылку на проект?</p><form id="lf" class="datebox"><label for="lname" class="hint">Как вас зовут</label><input type="text" id="lname" name="lname" required autocomplete="name" aria-required="true"><label for="lcontact" class="hint">Телефон или почта</label><input type="text" id="lcontact" name="lcontact" required autocomplete="tel" aria-required="true"><div class="qnav"><button type="button" class="btn ghost" id="lback">Назад</button><button class="btn" type="submit">Перейти к оплате</button></div></form>';
-    $("#lback").onclick=()=>{state.done=false;render();};
-    $("#lf").addEventListener("submit",e=>{e.preventDefault();
-      state.lead={n:$("#lname").value.trim(),c:$("#lcontact").value.trim()};
-      state.order=makeOrder(); saveQuiz(); render();});
-    return;
-  }
-  if(!state.order) state.order=makeOrder();
-  const o=state.order, link="app.html?order="+o.id, ilink="app.html?i="+o.inviteToken;
-  box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p>'+
-    '<p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+
-    '. В демо оплата не списывается: мы фиксируем состав заказа, сумму и контакт, как в MVP.</p>'+
-    '<div class="warn"><b>Следующий шаг:</b> позовите родных — имя и телефон каждого, — и отправьте приглашение в семейный чат. '+
-      'Можно и пропустить: соберёте книгу сами. <a class="btn" href="'+link+'&invite=1" '+
-      'style="margin-top:10px;padding:8px 14px;font-size:14px">Позвать родных</a></div>'+
-    '<div class="qnav"><button class="btn ghost" id="restart">Подобрать заново</button>'+
-    '<a class="btn" href="'+link+'">Открыть редактор</a></div>'+
-    '<p class="free">Ссылка проекта — только ваша: <code>'+link+'</code>. Родным уходит другая, '+
-      'по ней они добавляют материалы, но не могут менять заказ и печать: <code>'+ilink+'</code>.</p>';
-  $("#restart").onclick=()=>{
-    Object.assign(state,{i:0,a:{occ:"mom"},pick:null,copies:0,qr:false,cover:0,box:0,
-      urgent:false,credit:false,done:false,lead:null,order:null,urgentAuto:undefined});
-    try{ localStorage.removeItem(SKEY); }catch(_){}
-    saveQuiz(); render();
-  };
-}
-render();
-})();
-</script>
+})();</script>
 
 </body></html>
