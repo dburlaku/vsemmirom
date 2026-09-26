@@ -3347,10 +3347,119 @@ function migrateOrder(o){
 function loadOrder(id){
   try{ return migrateOrder(JSON.parse(localStorage.getItem(orderKey(id))||"null")); }catch(_){ return null; }
 }
-function saveOrder(o){
+function saveOrderLocal(o){
   if(!o) return;
   try{ localStorage.setItem(orderKey(o.id),JSON.stringify(o)); }catch(_){}
   indexTokens(o);
+}
+function saveOrder(o){
+  saveOrderLocal(o);
+  pushOrder(o);
+}
+
+/* =============================== сервер состояния (этап Э1)
+   На своём домене заказ живёт на сервере: ссылка-приглашение открывается с любого
+   устройства, а не только в браузере организатора. Если сервера рядом нет
+   (артефакт, файл с диска, GitHub Pages) — всё работает как раньше, на localStorage. */
+const API={
+  on:false, base:"/api",
+  async probe(){
+    try{
+      const c=new AbortController(), t=setTimeout(()=>c.abort(),3000);
+      const r=await fetch(API.base+"/health",{signal:c.signal,cache:"no-store"});
+      clearTimeout(t);
+      API.on = r.ok && ((await r.json())||{}).ok===true;
+    }catch(_){ API.on=false; }
+    return API.on;
+  },
+  async call(method,path,body){
+    const r=await fetch(API.base+path,{method,
+      headers:body?{"content-type":"application/json"}:undefined,
+      body:body?JSON.stringify(body):undefined,cache:"no-store"});
+    let j=null; try{ j=await r.json(); }catch(_){}
+    if(!r.ok) throw Object.assign(new Error((j&&j.error)||("http_"+r.status)),
+      {code:(j&&j.error)||("http_"+r.status), status:r.status, body:j});
+    return j;
+  }
+};
+/* поля заказа уезжают на сервер пачкой, с небольшой задержкой: правки идут очередями */
+let pushT=null, pushBusy=false;
+function pushOrder(o){
+  if(!API.on||!o||!o.server||state.role==="guest") return;
+  clearTimeout(pushT);
+  pushT=setTimeout(async()=>{
+    if(pushBusy) return pushOrder(o);
+    pushBusy=true;
+    try{
+      const r=await API.call("PATCH","/orders/"+encodeURIComponent(o.id),{
+        title:o.title, tier:o.tier, tierPrice:o.tierPrice, status:o.status,
+        extraDays:o.extraDays, volDecision:o.volDecision||"", series:o.series||null,
+        stage:o.stage, edition:o.edition, access:o.access, revoked:!!o.revoked,
+        owner:o.owner||{name:"",contact:""}
+      });
+      // сервер мог выдать новую ссылку-приглашение или заморозить старую
+      o.inviteToken=r.inviteToken; o.frozen=r.frozen; o.revoked=r.revoked;
+      o.invites=r.invites; o.log=r.log;
+      saveOrderLocal(o);
+      if(state.screen==="s-invite") invRender();
+    }catch(e){ if(e.code!=="not_found") console.warn("[api] заказ не сохранился:",e.code); }
+    finally{ pushBusy=false; }
+  },400);
+}
+/* журнал уходит сразу: по нему потом разбирают, кто что открыл и закрыл */
+function pushLog(o,act,info,who){
+  if(!API.on||!o||!o.server) return;
+  const path = state.role==="guest"
+    ? null                                  // у участника свои эндпоинты, они пишут журнал сами
+    : "/orders/"+encodeURIComponent(o.id);
+  if(!path) return;
+  API.call("PATCH",path,{logAct:act,logInfo:info||"",logWho:who||"владелец"}).catch(()=>{});
+}
+/* заказ с сервера: тот же объект, что раньше лежал в localStorage */
+async function orderFromServer(id){
+  const r=await API.call("GET","/orders/"+encodeURIComponent(id));
+  const o=migrateOrder(Object.assign({},r));
+  o.server=true;
+  saveOrderLocal(o);
+  return o;
+}
+/* участнику сервер отдаёт только его часть: ни id заказа, ни чужих контактов */
+function applyGuestView(g,token){
+  const o=migrateOrder({
+    id:"g"+g.pid, pid:g.pid, server:true,
+    title:g.title, occasion:g.occasion, date:g.date||"", deliv:g.deliv||"later",
+    extraDays:g.extraDays||0, stage:g.stage||"collect", status:"paid",
+    access:{collect:!!(g.access&&g.access.collect), invite:false, public:!!(g.access&&g.access.public)},
+    owner:{name:(g.owner&&g.owner.name)||"", contact:""},
+    invites:(g.invites||[]).map((p,i)=>({id:"x"+i,token:"",name:p.name,contact:"",
+      status:p.status,items:p.items||0})),
+    log:[]
+  });
+  state.guestToken=token;
+  state.guest=g.me?{id:g.me.id,token:token,name:g.me.name,contact:g.me.contact,
+                    status:g.me.status,items:g.me.items}:null;
+  state.guestName=(g.me&&g.me.name)||"";
+  applyOrder(o,"guest");
+  guestPaint();
+}
+const GUEST_MSG={
+  revoked:"Организатор закрыл доступ к книге.",
+  removed:"Организатор убрал вас из участников книги.",
+  invite_off:"Ссылку-приглашение отозвали. Попросите организатора прислать новую.",
+  frozen:"Ссылку открыло слишком много людей за короткое время, приём по общей ссылке заморожен. Напишите организатору.",
+  collect_closed:"Сбор материалов закрыт — книга уже готовится к печати.",
+  limit:"Мест больше нет: в книгу входит до "+20+" участников. Напишите организатору.",
+  too_many:"Слишком много попыток за минуту. Подождите и откройте ссылку снова."
+};
+async function guestOpenServer(token){
+  try{
+    applyGuestView(await API.call("GET","/i/"+encodeURIComponent(token)),token);
+    return true;
+  }catch(e){
+    if(e.code==="not_found"){ window.__inviteMissing=true; return false; }
+    window.__inviteClosed=GUEST_MSG[e.code]||"Ссылка сейчас не работает. Напишите организатору.";
+    return false;
+  }
 }
 function indexTokens(o){
   if(o.revoked){ tokenDrop(o.inviteToken); o.invites.forEach(p=>tokenDrop(p.token)); return; }
@@ -3362,9 +3471,11 @@ function indexTokens(o){
 /* §5.2: всё, что открывает и закрывает доступ, попадает в журнал */
 function logAct(o,act,info){
   if(!o) return;
-  o.log.push({t:Date.now(),who:state.role==="guest"?(state.guestName||"участник"):"владелец",act:act,info:info||""});
+  const who=state.role==="guest"?(state.guestName||"участник"):"владелец";
+  o.log.push({t:Date.now(),who:who,act:act,info:info||""});
   if(o.log.length>200) o.log=o.log.slice(-200);
-  saveOrder(o);
+  saveOrderLocal(o);
+  pushLog(o,act,info,who);
 }
 function logLines(o,n){
   return (o.log||[]).slice(-(n||8)).reverse().map(r=>{
@@ -3554,10 +3665,8 @@ function invRender(){
       confirmBox({title:"Убрать "+p.name+"?",
         text:"Участник потеряет доступ по своей ссылке. Его фото и подписи ("+(p.items||0)+") уйдут из книги вместе с ним. Действие попадёт в журнал доступа.",
         ok:"Убрать", danger:true, go:()=>{
-          p.status="removed"; tokenDrop(p.token);
-          logAct(o,"участник убран",p.name+(p.items?", материалов: "+p.items:""));
-          invRender(); projCard();
-          toast(p.name+" больше не участник книги");
+          invRemove(o,p,()=>{ invRender(); projCard();
+            toast(p.name+" больше не участник книги"); });
         }});
     });
     box.appendChild(r);
@@ -3578,8 +3687,29 @@ function invAdd(name,contact){
     toast("В тариф входит до "+INV_LIMIT+" участников"); return;
   }
   if(!name.trim()) return;
+  // на сервере участник получает свой токен: личная ссылка должна работать у него на телефоне
+  if(API.on&&o.server){
+    API.call("POST","/orders/"+encodeURIComponent(o.id)+"/invites",
+             {people:[{name:name.trim(),contact:contact.trim()}]})
+      .then(r=>{ o.invites=r.invites; o.log=r.log; saveOrderLocal(o); invRender(); projCard(); })
+      .catch(e=>toast(e.code==="limit"?("В тариф входит до "+INV_LIMIT+" участников")
+                                      :"Не получилось добавить участника"));
+    return;
+  }
   o.invites.push({id:"p"+rnd(6),token:rnd(12),name:name.trim(),contact:contact.trim(),status:"draft",items:0});
   saveOrder(o); invRender();
+}
+/* убрать участника: на сервере вместе с его доступом */
+function invRemove(o,p,after){
+  if(API.on&&o.server){
+    API.call("DELETE","/orders/"+encodeURIComponent(o.id)+"/invites/"+encodeURIComponent(p.id))
+      .then(r=>{ o.invites=r.invites; o.log=r.log; saveOrderLocal(o); after&&after(); })
+      .catch(()=>toast("Не получилось убрать участника"));
+    return;
+  }
+  p.status="removed"; tokenDrop(p.token);
+  logAct(o,"участник убран",p.name+(p.items?", материалов: "+p.items:""));
+  after&&after();
 }
 
 /* ---------- вход по приглашению (§3) ---------- */
@@ -3658,6 +3788,8 @@ function askGuest(){
   const o=state.order;
   return new Promise(res=>{
     if(state.role!=="guest"||!o) return res(true);
+    // именного участника сервер уже знает — имя не спрашиваем повторно
+    if(state.guest&&state.guest.name) return res(true);
     const me=guestWho(o.id);
     if(me&&me.name) return res(true);
     const el=document.createElement("div"); el.className="modal";
@@ -3673,6 +3805,18 @@ function askGuest(){
       const contact=($("gContact").value||"").trim();
       guestSet(o.id,{name:name,contact:contact,at:Date.now()});
       state.guestName=name;
+      // на сервере участник получает собственный токен: со своего телефона он вернётся к своей части книги
+      if(API.on&&state.guestToken){
+        API.call("POST","/i/"+encodeURIComponent(state.guestToken)+"/join",{name:name,contact:contact})
+          .then(g=>{
+            if(g.token) state.guestToken=g.token;
+            state.guest=g.me?Object.assign({token:state.guestToken},g.me):state.guest;
+            guestSet(o.id,{name:name,contact:contact,at:Date.now(),token:state.guestToken});
+            applyRole(); guestPaint();
+          })
+          .catch(()=>toast("Сервер не ответил — попробуйте ещё раз"));
+        el.remove(); res(true); return;
+      }
       let p=state.guest;
       if(!p){
         p={id:"p"+rnd(6),token:rnd(12),name:name,contact:contact,status:"joined",items:0};
@@ -3691,6 +3835,12 @@ function guestCount(n){
   const o=state.order; if(state.role!=="guest"||!o||!state.guest) return;
   state.guest.items=(state.guest.items||0)+n;
   state.guest.status="contrib";
+  if(API.on&&state.guestToken){
+    API.call("POST","/i/"+encodeURIComponent(state.guestToken)+"/items",{n:n})
+      .then(r=>{ state.guest.items=r.items; })
+      .catch(e=>{ if(e.code==="collect_closed") toast("Организатор закрыл сбор — материалы уже не принимаются"); });
+    return;
+  }
   logAct(o,"участник добавил материалы",state.guestName+": "+n);
 }
 
@@ -3768,8 +3918,7 @@ function accessDialog(){
     const p=o.invites.find(x=>x.id===b.dataset.rm); if(!p) return;
     confirmBox({title:"Убрать "+p.name+"?",
       text:"Доступ по его ссылке перестанет работать, материалы ("+(p.items||0)+") уйдут из книги. Действие попадёт в журнал.",
-      ok:"Убрать",danger:true,go:()=>{ p.status="removed"; tokenDrop(p.token);
-        logAct(o,"участник убран",p.name); redraw(); }});
+      ok:"Убрать",danger:true,go:()=>{ invRemove(o,p,redraw); }});
   }));
   if($("acClose1")) $("acClose1").addEventListener("click",()=>{
     confirmBox({title:"Закрыть сбор материалов?",
@@ -4359,7 +4508,13 @@ $("invSend").addEventListener("click",async()=>{
   const o=state.order; if(!o) return;
   if(!invites().length){ toast("Добавьте хотя бы одного участника"); return; }
   o.invites.forEach(p=>{ p.sent=true; if(p.status==="draft") p.status="sent"; });
-  logAct(o,"приглашения отправлены","участников: "+invites().filter(p=>p.status!=="removed").length);
+  if(API.on&&o.server){
+    try{ const r=await API.call("POST","/orders/"+encodeURIComponent(o.id)+"/invites/send");
+         o.invites=r.invites; o.log=r.log; saveOrderLocal(o); }
+    catch(_){ toast("Сервер не ответил — статусы обновятся при следующем открытии"); }
+  }else{
+    logAct(o,"приглашения отправлены","участников: "+invites().filter(p=>p.status!=="removed").length);
+  }
   let copied=false;
   try{ await navigator.clipboard.writeText($("invText").value); copied=true; }catch(_){}
   $("invCopied").textContent=copied
@@ -4381,17 +4536,26 @@ $("gvLook").addEventListener("click",()=>{
   toast("Книга ещё собирается — развороты появятся, когда организатор соберёт первые страницы");
   show("s-upload");
 });
-(function(){
+/* Открытие по ссылке. На своём домене сначала спрашиваем сервер — тогда книга
+   открывается с любого устройства; без сервера остаётся прежний путь через localStorage. */
+const BOOT=(async function(){
   const q=new URLSearchParams(location.search);
-  const tok=q.get("i");
+  const tok=q.get("i"), id=q.get("order");
+  if(!tok&&!id) return;
+  await API.probe();
   if(tok){
-    if(guestOpen(tok)) window.__orderStart="s-guest";
-    else window.__orderMissing=true;
+    let ok=false;
+    if(API.on) ok=await guestOpenServer(tok);
+    else ok=guestOpen(tok);
+    if(ok) window.__orderStart="s-guest"; else window.__orderMissing=true;
     return;
   }
-  const id=q.get("order");
-  if(!id) return;
-  const o=loadOrder(id);
+  let o=null;
+  if(API.on){
+    try{ o=await orderFromServer(id); }
+    catch(e){ if(e.code!=="not_found") o=loadOrder(id); }
+  }
+  if(!o) o=loadOrder(id);
   if(!o){ window.__orderMissing=true; return; }
   applyOrder(o,"owner");
   window.__orderStart = q.get("invite")==="1" ? "s-invite" : "s-upload";
@@ -4410,20 +4574,23 @@ $("gvLook").addEventListener("click",()=>{
 })();
 acctPaint();
 upCounts();
-if(window.__orderMissing){
+function orderMissingText(){
   if(window.__inviteClosed){
     $("orderH").textContent="Ссылка больше не работает";
     $("orderMsg").textContent=window.__inviteClosed;
   }else if(window.__inviteMissing){
     $("orderH").textContent="Не нашли эту книгу";
-    $("orderMsg").textContent="В демоверсии книга живёт в браузере организатора, поэтому чужая ссылка "+
-      "на другом устройстве не откроется. Попросите организатора открыть ссылку на своём компьютере "+
-      "или дождитесь версии с сервером.";
+    $("orderMsg").textContent=API.on
+      ? "Такой ссылки у нас нет. Проверьте, что скопировали её целиком, или попросите организатора прислать новую."
+      : "В демоверсии книга живёт в браузере организатора, поэтому чужая ссылка "+
+        "на другом устройстве не откроется. Попросите организатора открыть ссылку на своём компьютере.";
   }
 }
 /* Вход один — лендинг (ТЗ ред. 6, §2). Витрина «Альбом из папки» показывается только
    по явному адресу бесплатного конструктора; без заказа открывается список книг. */
 (async function start(){
+  await BOOT;
+  orderMissingText();
   if(window.__orderMissing){ show("s-order"); return; }
   if(window.__orderStart){ show(window.__orderStart); return; }
   if(new URLSearchParams(location.search).get("free")==="1"){ show("s-landing"); return; }

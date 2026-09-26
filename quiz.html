@@ -537,6 +537,21 @@ function renderResult(box){
   $("#pay").onclick=()=>{state.done=true;render();};
 }
 function syncEx(){}
+/* Заказ заводится на сервере: тогда ссылка-приглашение работает у родных на их телефонах.
+   Если сервера рядом нет (демо на GitHub Pages, файл с диска) — заказ остаётся в браузере. */
+async function apiMakeOrder(o){
+  try{
+    const h=await fetch("/api/health",{cache:"no-store"});
+    if(!h.ok||!((await h.json())||{}).ok) return null;
+    const r=await fetch("/api/orders",{method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({title:o.title,occasion:o.occasion,date:o.date,tier:o.tier,
+        tierPrice:o.tierPrice,deliv:o.deliv,people:o.people,status:o.status,owner:o.owner})});
+    if(!r.ok) return null;
+    const s=await r.json();
+    return Object.assign({},o,{id:s.id,inviteToken:s.inviteToken,server:true,log:s.log||o.log});
+  }catch(_){ return null; }
+}
 function makeOrder(){
   const c=calc(), t=TAR[state.pick];
   const id="o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -557,23 +572,37 @@ function makeOrder(){
     access:{collect:true, invite:true, public:false},
     stage:"collect", edition:1, extraDays:0, log:[{t:Date.now(),who:"владелец",act:"заказ создан",info:t.n}]
   };
-  try{ localStorage.setItem("vm:order:"+id, JSON.stringify(o)); }catch(_){}
+  return o;
+}
+function keepOrder(o){
+  try{ localStorage.setItem("vm:order:"+o.id, JSON.stringify(o)); }catch(_){}
   try{ const m=JSON.parse(localStorage.getItem("vm:tokens")||"{}")||{};
-       m[tok]={order:id,invite:null};
+       m[o.inviteToken]={order:o.id,invite:null};
        localStorage.setItem("vm:tokens",JSON.stringify(m)); }catch(_){}
   return o;
+}
+/* сперва сервер, при неудаче — локально; ссылки в любом случае получаются рабочие */
+async function createOrder(){
+  const local=makeOrder();
+  const srv=await apiMakeOrder(local);
+  return keepOrder(srv||local);
 }
 function renderDone(box){
   const c=calc();
   if(!state.lead){
     box.innerHTML='<p class="eyebrow">Почти готово</p><p class="qtitle">Куда прислать ссылку на проект?</p><form id="lf" class="datebox"><label for="lname" class="hint">Как вас зовут</label><input type="text" id="lname" name="lname" required autocomplete="name" aria-required="true"><label for="lcontact" class="hint">Телефон или почта</label><input type="text" id="lcontact" name="lcontact" required autocomplete="tel" aria-required="true"><div class="qnav"><button type="button" class="btn ghost" id="lback">Назад</button><button class="btn" type="submit">Перейти к оплате</button></div></form>';
     $("#lback").onclick=()=>{state.done=false;render();};
-    $("#lf").addEventListener("submit",e=>{e.preventDefault();
+    $("#lf").addEventListener("submit",async e=>{e.preventDefault();
       state.lead={n:$("#lname").value.trim(),c:$("#lcontact").value.trim()};
-      state.order=makeOrder(); saveQuiz(); render();});
+      const btn=$("#lf button[type=submit]"); if(btn){ btn.disabled=true; btn.textContent="Создаю проект…"; }
+      state.order=await createOrder(); saveQuiz(); render();});
     return;
   }
-  if(!state.order) state.order=makeOrder();
+  if(!state.order){
+    box.innerHTML='<p class="eyebrow">Почти готово</p><p class="qtitle">Создаю проект…</p>';
+    createOrder().then(o=>{ state.order=o; saveQuiz(); render(); });
+    return;
+  }
   const o=state.order, link="app.html?order="+o.id, ilink="app.html?i="+o.inviteToken;
   box.innerHTML='<p class="eyebrow">Заявка принята</p><p class="qtitle">'+state.lead.n+', проект создан</p>'+
     '<p class="note">Книга «'+TAR[state.pick].n+'», '+c.ex+' экз., итого '+fmt(c.total)+
