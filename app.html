@@ -440,7 +440,7 @@ h1,h2,h3{text-wrap:balance}
 </header>
 
 <!-- ============ 1. landing ============ -->
-<section id="s-landing">
+<section id="s-landing" hidden>
   <div class="wrap hero">
     <div class="eyebrow">Фотоальбом под печать</div>
     <h1>Альбом из папки с фотографиями — за пару минут</h1>
@@ -2177,7 +2177,7 @@ function todoNote(){
               act:{id:"tdBlank",text:"Показать"}});
   const min=state.order?tierMin(state.order.tier):0;
   if(min&&state.pages.length<min) items.push({key:"min", done:false,
-              label:"книга короче тарифа: "+state.pages.length+" из "+min+" страниц",
+              label:"книга короче тарифа: "+state.pages.length+" из "+min,
               act:{id:"tdMin",text:"Решить"}});
   if(state.order) items.push({key:"inv", done:(state.order.invites||[]).some(p=>p.status!=="draft"&&p.status!=="removed"),
               label:"позвать родных",
@@ -2217,19 +2217,23 @@ function volumeScreen(fromChecklist){
   const opts=[];
   if(sit==="short"){
     $("volTitle").textContent="Книга короче оплаченного тарифа";
-    $("volSub").textContent="Собрано "+pages+" страниц, а тариф «"+state.order.tier+"» — от "+min+
+    $("volSub").textContent="Собрано "+plural(pages,"страница","страницы","страниц")+
+      ", а тариф «"+state.order.tier+"» — от "+min+
       ". Решите, как поступить: вернуться к этому экрану можно из чеклиста печати.";
-    opts.push({k:"add", t:"Добавить кадры", d:"Открою загрузку — доберём книгу до "+min+" страниц"});
+    opts.push({k:"add", t:"Добавить кадры",
+      d:"Открою загрузку — доберём книгу до "+plural(min,"страницы","страниц","страниц")});
     opts.push({k:"down", t:"Сменить тариф с возвратом разницы",
       d:"Тариф станет «"+tierFor(pages)+"», разницу вернём на карту после подключения оплаты"});
-    opts.push({k:"asis", t:"Оставить как есть", d:"Напечатаем "+pages+" страниц по текущему тарифу"});
+    opts.push({k:"asis", t:"Оставить как есть",
+      d:"Напечатаем "+plural(pages,"страницу","страницы","страниц")+" по текущему тарифу"});
   }else{
     $("volTitle").textContent="Кадров больше, чем вмещает объём";
     $("volSub").textContent="В книге "+fits+" кадров, в лотке ещё "+over+
       ". Уплотнять вёрстку не буду — выберите, как поступить.";
-    opts.push({k:"more", t:"Увеличить объём до "+need+" страниц",
+    opts.push({k:"more", t:"Увеличить объём до "+plural(need,"страницы","страниц","страниц"),
       d:"Тариф «"+tierFor(need)+"», войдёт почти всё отобранное"});
-    opts.push({k:"best", t:"Оставить лучшие", d:"Книга останется на "+pages+" страниц, остальные кадры ждут в лотке"});
+    opts.push({k:"best", t:"Оставить лучшие",
+      d:"Книга останется на "+plural(pages,"странице","страницах","страницах")+", остальные кадры ждут в лотке"});
     opts.push({k:"vol",  t:"Разделить на тома", d:"Связанные проекты с общим оформлением и нумерацией"});
   }
   $("volOpts").innerHTML=opts.map(o=>'<button class="vol-opt" data-k="'+o.k+'"><span>'+
@@ -4227,17 +4231,18 @@ if(window.__orderMissing){
       "или дождитесь версии с сервером.";
   }
 }
+/* Вход один — лендинг (ТЗ ред. 6, §2). Витрина «Альбом из папки» показывается только
+   по явному адресу бесплатного конструктора; без заказа открывается список книг. */
 (async function start(){
   if(window.__orderMissing){ show("s-order"); return; }
   if(window.__orderStart){ show(window.__orderStart); return; }
   if(new URLSearchParams(location.search).get("free")==="1"){ show("s-landing"); return; }
-  // адрес без заказа ведёт в список книг или на лендинг, а не в витрину (баг-лист §6)
   if(drafts().length){ show("s-albums"); return; }
   try{
     const r=await fetch("index.html",{method:"HEAD"});
-    if(r.ok){ location.replace("index.html"); return; }
+    if(r.ok){ location.replace("index.html"); return; }   // лендинг рядом — уходим туда
   }catch(_){}
-  show("s-landing");
+  show("s-albums");      // лендинга рядом нет (артефакт): сразу список книг с кнопкой «Создать»
 })();
 })();
 </script>
