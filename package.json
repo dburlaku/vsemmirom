@@ -1,0 +1,9 @@
+{
+  "name": "vsemmirom-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сервер состояния заказа «Всем миром»",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "pg": "^8.13.1" }
+}
