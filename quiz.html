@@ -356,7 +356,7 @@ const Q=[
   {k:"occ",t:"Какой повод?",o:[["mom","Юбилей мамы или папы"],["wedding","Годовщина свадьбы"],["work","Проводы или юбилей коллеги"],["grad","Выпускной"],["other","Другое","день рождения, память, семья"]]},
   {k:"date",t:"Когда праздник?",type:"date"},
   {k:"deliv",t:"Куда доставить книгу?",o:[["msk","Москва или Санкт-Петербург"],["ru","Другой город России"],["later","Решу позже"]]},
-  {k:"photos",t:"Сколько фото наберётся у всех вместе?",o:[["s","До 60","хватит на 24–40 страниц"],["m","60–150","книга на 44–80 страниц"],["l","150–300","книга на 84–120 страниц"],["xl","Больше 300","одна книга из лучших кадров или две книги"]]},
+  {k:"photos",t:"Сколько фото наберётся у всех вместе?",o:[["s","До 60","хватит на 24–40 страниц"],["m","60–150","книга на 44–80 страниц"],["l","150–300","книга на 84–120 страниц"],["xl","Больше 300","одна книга из лучших кадров или больше"]]},
   {k:"texts",t:"Кто будет писать тексты?",o:[["self","Мы сами"],["ai","Сами, но с подсказками","сервис предложит варианты"],["editor","Хочу, чтобы помог редактор"]]},
   {k:"people",t:"Кто будет собирать книгу?",o:[["1","Только я",""],["5","Я и 2–5 родных"],["12","6–20 человек"],["30","Больше 20","класс, большой отдел"]]}
 ];
@@ -431,6 +431,8 @@ function prevLine(){
 try{ if("scrollRestoration" in history) history.scrollRestoration="manual"; }catch(_){}
 window.addEventListener("pageshow",()=>{ if(!location.hash) window.scrollTo(0,0); });
 function render(keepScroll){
+  if(!(state.i>=0)) state.i=0;
+  if(state.i>Q.length) state.i=Q.length;
   saveQuiz();
   prevLine();
   const box=$("#quizBox");
@@ -463,7 +465,9 @@ function renderQ(box){
   } else {
     h+='<div class="opts">'+q.o.map(o=>'<button class="opt" data-v="'+o[0]+'" aria-pressed="'+(state.a[q.k]===o[0])+'">'+o[1]+(o[2]?"<small>"+o[2]+"</small>":"")+"</button>").join("")+"</div>";
   }
-  h+='<div class="qnav"><button class="btn ghost" id="back" '+(state.i===0?"hidden":"")+'>Назад</button><span></span>';
+  h+='<div class="qnav">'+(state.i===0
+      ? '<a class="btn ghost" href="index.html">На главную</a>'
+      : '<button class="btn ghost" id="back">Назад</button>')+'<span></span>';
   if(q.type==="date") h+='<button class="btn" id="next">'+(state.a.date?"Дальше":"Пропустить — даты нет")+'</button>';
   h+="</div>";
   if(state.i===0) h+='<p class="free">Не готовы платить сейчас? <a href="app.html?free=1">Соберите альбом бесплатно в браузере</a></p>';
@@ -483,7 +487,7 @@ function renderQ(box){
   if(dm) dm.onchange=setDate;
   if(yr) yr.onchange=setDate;
   const nx=$("#next");if(nx)nx.onclick=()=>{state.i++;render();};
-  const bk=$("#back");if(bk)bk.onclick=()=>{state.i--;render();};
+  const bk=$("#back");if(bk)bk.onclick=()=>{state.i=Math.max(0,state.i-1);render();};
 }
 function mini(k){const n={moment:4,glava:8,zhizn:12,editor:12}[k];const c=["--ph1","--ph2","--ph3","--ph4","--ph5"];let s="";for(let j=0;j<4;j++)s+='<i style="background:var('+c[(j+n)%5]+')"></i>';return '<div class="mini">'+s+"</div>";}
 function renderResult(box){
@@ -491,9 +495,12 @@ function renderResult(box){
   const dl=daysLeft();if(dl!==null&&dl>=0&&dl<14&&state.urgentAuto!==false){state.urgent=true;}
   const ppl=PEOPLE_N[state.a.people]||1;
   let h='<div class="qhead"><span class="eyebrow">Ваша книга</span><button class="btn ghost" id="again" style="padding:8px 14px">Изменить ответы</button></div>';
-  if(state.bigArchive) h+='<div class="warn">Фото больше, чем вмещает одна книга. По умолчанию соберём '+
-    'одну книгу из лучших кадров — это бесплатно. Если захотите сохранить всё, можно сделать две книги: '+
-    'цена второй будет видна на кнопке до подтверждения.</div>';
+  if(state.bigArchive){
+    const t=TAR[state.pick||recommend().rec]||TAR.zhizn;
+    h+='<div class="warn">Фото больше, чем вмещает одна книга. По умолчанию соберём одну книгу из лучших '+
+      'кадров — '+fmt(t.p)+', это бесплатно сверх тарифа. Если решите сохранить всё, каждая следующая книга '+
+      'серии считается по цене своего тарифа: две книги — '+fmt(t.p*2)+'.</div>';
+  }
   h+='<div class="cards">'+r.list.map(k=>{const t=TAR[k];return '<button class="card" data-k="'+k+'" aria-pressed="'+(state.pick===k)+'">'+(k===r.rec?'<span class="rec">Подходит лучше всего</span>':'<span class="rec" style="visibility:hidden">—</span>')+mini(k)+'<h3>'+t.n+'</h3><span class="price">'+fmt(t.p)+'</span>'+(ppl>1?'<span class="per">≈ '+fmt(Math.ceil(t.p/ppl/10)*10)+' с каждого из '+ppl+'</span>':'<span class="per">'+t.pg+'</span>')+'<ul><li>'+t.pg+'</li><li>до 20 участников, облако 12 мес.</li><li>ссылка на книгу для родных</li></ul></button>';}).join("")+"</div>";
   if(state.a.people==="30") h+='<p class="warn">В проекте до 20 участников. Для класса или большого отдела позовите 20 самых активных: остальные смогут посмотреть книгу по ссылке и заказать свой экземпляр.</p>';
   const c=calc();
